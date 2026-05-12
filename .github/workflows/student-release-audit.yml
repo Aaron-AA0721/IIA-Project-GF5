@@ -1,0 +1,28 @@
+name: Student Release Audit
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Build generated HTML
+        run: python docs/build_site.py
+
+      - name: Ensure generated HTML is committed
+        run: git diff --exit-code -- docs/*.html
+
+      - name: Audit student release
+        run: python scripts/check_student_release.py .
