@@ -19,10 +19,7 @@ jobs:
           python-version: "3.x"
 
       - name: Build generated HTML
-        run: python docs/build_site.py
-
-      - name: Ensure generated HTML is committed
-        run: git diff --exit-code -- docs/*.html
+        run: python docs/build_site.py --output site --source-base-url https://github.com/CambridgeCVCourses/IIA-Project-GF5/blob/main/docs
 
       - name: Audit student release
         run: python scripts/check_student_release.py .

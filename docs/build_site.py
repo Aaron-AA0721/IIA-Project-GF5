@@ -7,13 +7,17 @@ edited by hand; rerun this script after editing Markdown.
 
 from __future__ import annotations
 
+import argparse
 import html
+import os
 import re
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent
+DEFAULT_OUTPUT = ROOT.parent / "site"
 SITE_TITLE = "GF5: Animating 3D Characters"
 
 
@@ -341,13 +345,24 @@ def render_toc(doc: RenderedDocument) -> str:
 """
 
 
-def render_page(page: Page) -> str:
+def render_page(
+    page: Page,
+    *,
+    source_base_url: str | None = None,
+    source_relative_base: str = "",
+) -> str:
     markdown = (ROOT / page.source).read_text(encoding="utf-8")
     doc = MarkdownRenderer().render(markdown)
     title = doc.title or page.nav_label
     html_title = SITE_TITLE if title == SITE_TITLE else f"{title} | {SITE_TITLE}"
     release_summary = render_release_summary() if page.output == "index.html" else ""
     toc = render_toc(doc)
+    if source_base_url:
+        source_href = f"{source_base_url.rstrip('/')}/{page.source}"
+    elif source_relative_base and source_relative_base != ".":
+        source_href = f"{source_relative_base.rstrip('/')}/{page.source}"
+    else:
+        source_href = page.source
     return f"""<!doctype html>
 <!-- Generated from {page.source} by docs/build_site.py. Do not edit by hand. -->
 <html lang="en">
@@ -382,7 +397,7 @@ def render_page(page: Page) -> str:
 
     <footer class="footer">
       <div class="footer-inner">
-        Markdown source: <a href="{html.escape(page.source, quote=True)}">{html.escape(page.source)}</a>.
+        Generated from Markdown source: <a href="{html.escape(source_href, quote=True)}">{html.escape(page.source)}</a>.
       </div>
     </footer>
   </body>
@@ -395,11 +410,46 @@ def indent(text: str, spaces: int) -> str:
     return "\n".join(prefix + line if line else line for line in text.splitlines())
 
 
-def main() -> None:
+def build_site(output: Path, *, source_base_url: str | None = None) -> None:
+    output = output.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    assets_output = output / "assets"
+    if assets_output.exists():
+        shutil.rmtree(assets_output)
+    shutil.copytree(ROOT / "assets", assets_output)
+    (output / ".nojekyll").write_text("", encoding="utf-8")
+    source_relative_base = Path(os.path.relpath(ROOT, output)).as_posix()
+
     for page in PAGES:
-        output = ROOT / page.output
-        output.write_text(render_page(page), encoding="utf-8")
-        print(f"wrote {output.relative_to(ROOT)} from {page.source}")
+        output_path = output / page.output
+        output_path.write_text(
+            render_page(
+                page,
+                source_base_url=source_base_url,
+                source_relative_base=source_relative_base,
+            ),
+            encoding="utf-8",
+        )
+        display_path = output_path.relative_to(Path.cwd()) if output_path.is_relative_to(Path.cwd()) else output_path
+        print(f"wrote {display_path} from {page.source}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=DEFAULT_OUTPUT,
+        help="Directory where generated site files should be written.",
+    )
+    parser.add_argument(
+        "--source-base-url",
+        default=None,
+        help="Optional URL prefix for Markdown source links in generated footers.",
+    )
+    args = parser.parse_args()
+
+    build_site(args.output.resolve(), source_base_url=args.source_base_url)
 
 
 if __name__ == "__main__":

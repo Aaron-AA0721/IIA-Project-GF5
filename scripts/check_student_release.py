@@ -37,6 +37,7 @@ FORBIDDEN_GLOBS = (
     "**/*.pyc",
     "**/*.pkl",
     "**/*.pickle",
+    "docs/*.html",
 )
 
 FORBIDDEN_TEXT = (

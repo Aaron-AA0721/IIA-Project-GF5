@@ -12,28 +12,31 @@ code and assets. The project is organised into three parts:
 
 ## Reading Order
 
-- [Student Website](docs/index.html)
 - [Project Overview](docs/project_overview.md)
 - [Part 1: Forward Kinematics](docs/part1.md)
 - [Part 2: Skinning and LBS](docs/part2.md)
 - [Interim Report](docs/interim.md)
-- [Part 3: Coming Soon](docs/part3.html)
+- [Part 3: Coming Soon](docs/part3_placeholder.md)
 
-For the Parts 1 and 2 student release, start from the static website at
-`docs/index.html`. It can be opened directly in a browser or served from the
-`docs/` folder by a simple static host.
-
-The website is generated from the Markdown handouts. After editing Markdown in
-`docs/`, regenerate the HTML pages with:
+For the Parts 1 and 2 student release, start from the published GitHub Pages
+site. To build the site locally, run:
 
 ```bash
 python docs/build_site.py
 ```
 
-On GitHub, `.github/workflows/build-docs-site.yml` runs the same generator when
-Markdown changes are pushed to `main`, uploads the generated `docs/` directory,
-and deploys it with GitHub Pages. Configure GitHub Pages to use GitHub Actions
-as the publishing source.
+Then open `site/index.html`.
+
+The website is generated from the Markdown handouts. After editing Markdown in
+`docs/`, regenerate the local HTML preview with:
+
+```bash
+python docs/build_site.py
+```
+
+On GitHub, `.github/workflows/build-docs-site.yml` publishes generated HTML to
+the `gh-pages` branch. Configure GitHub Pages to deploy from the `gh-pages`
+branch root.
 
 ## Repository Layout
 

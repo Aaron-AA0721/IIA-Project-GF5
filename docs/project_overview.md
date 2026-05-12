@@ -79,7 +79,7 @@ Focus:
 - final brief and deliverables to be released after the interim checkpoint
 
 The Part 3 brief is not part of the current Parts 1 and 2 release. Use the
-[website placeholder](part3.html) for release status.
+[Part 3 placeholder](part3_placeholder.md) for release status.
 
 ## Interim Checkpoint
 

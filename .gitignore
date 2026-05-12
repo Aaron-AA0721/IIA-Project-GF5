@@ -33,3 +33,6 @@ viewer/reference_impl/
 
 # Local release marker
 .gf5_student_release
+
+# Local generated site preview
+site/

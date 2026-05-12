@@ -14,23 +14,20 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
-  group: github-pages
+  group: gh-pages-publish
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  build-and-publish:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,28 +35,26 @@ jobs:
           python-version: "3.x"
 
       - name: Build generated HTML
-        run: python docs/build_site.py
+        run: python docs/build_site.py --output site --source-base-url https://github.com/CambridgeCVCourses/IIA-Project-GF5/blob/main/docs
 
-      - name: Commit generated HTML
+      - name: Publish generated HTML to gh-pages
         run: |
-          if git diff --quiet -- docs/*.html; then
-            echo "Generated HTML already matches Markdown."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -rf gh-pages-worktree
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            git fetch origin gh-pages
+            git worktree add gh-pages-worktree origin/gh-pages
           else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add docs/*.html
-            git commit -m "Build docs site"
-            git push
+            git worktree add --detach gh-pages-worktree
+            git -C gh-pages-worktree checkout --orphan gh-pages
           fi
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload site artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          find gh-pages-worktree -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R site/. gh-pages-worktree/
+          git -C gh-pages-worktree add -A
+          if git -C gh-pages-worktree diff --cached --quiet; then
+            echo "Generated gh-pages content is unchanged."
+          else
+            git -C gh-pages-worktree commit -m "Build docs site"
+            git -C gh-pages-worktree push origin HEAD:gh-pages
+          fi
