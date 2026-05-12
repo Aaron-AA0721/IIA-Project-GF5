@@ -2,9 +2,9 @@
 
 [![Project Page](https://img.shields.io/badge/Project%20Page-GitHub%20Pages-0969da)](https://cambridgecvcourses.github.io/IIA-Project-GF5/)
 
-This repository contains the code, assets, and handout source for an
-undergraduate project on 3D character animation. The rendered student handouts
-are available on the project page.
+This repository contains the codebase for the IIA Project GF5: Animating 3D Characters. Start with the [project page](https://cambridgecvcourses.github.io/IIA-Project-GF5/) for the brief, instructions, and
+interim report, then use this repo to run the viewer and complete the coding
+tasks.
 
 The project is organised into three parts:
 
@@ -12,20 +12,17 @@ The project is organised into three parts:
 - Part 2: skinning weights and linear blend skinning using SMPL
 - Part 3: later group character-animation brief
 
-## Handouts
+## Project Handouts
 
-- [Project Overview](docs/project_overview.md)
-- [Part 1: Forward Kinematics](docs/part1.md)
-- [Part 2: Skinning and LBS](docs/part2.md)
-- [Interim Report](docs/interim.md)
-- [Part 3: Coming Soon](docs/part3_placeholder.md)
-
-The project page is the main student-facing version of the Parts 1 and 2
-handouts. The Markdown files in `docs/` are included here as source documents.
+- [Project Overview](https://cambridgecvcourses.github.io/IIA-Project-GF5/)
+- [Part 1: Forward Kinematics](https://cambridgecvcourses.github.io/IIA-Project-GF5/part1.html)
+- [Part 2: Skinning and LBS](https://cambridgecvcourses.github.io/IIA-Project-GF5/part2.html)
+- [Interim Report](https://cambridgecvcourses.github.io/IIA-Project-GF5/interim.html)
+- [Part 3: Coming Soon](https://cambridgecvcourses.github.io/IIA-Project-GF5/part3.html)
 
 ## Running the Viewer
 
-Create the Python environment from the shipped environment file:
+You will need to run the viewer locally. Create the Python environment from the shipped environment file:
 
 ```bash
 mamba env create -f env.yml
