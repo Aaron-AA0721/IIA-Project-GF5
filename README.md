@@ -1,5 +1,8 @@
 # GF5: Animating 3D Characters
 
+**Students:** Start from the
+[GF5 project page](https://cambridgecvcourses.github.io/IIA-Project-GF5/).
+
 This repository contains the teaching assets and student handouts for an
 undergraduate project on 3D character animation.
 
@@ -18,8 +21,9 @@ code and assets. The project is organised into three parts:
 - [Interim Report](docs/interim.md)
 - [Part 3: Coming Soon](docs/part3_placeholder.md)
 
-For the Parts 1 and 2 student release, start from the published GitHub Pages
-site. To build the site locally, run:
+For the Parts 1 and 2 student release, start from the
+[published GitHub Pages site](https://cambridgecvcourses.github.io/IIA-Project-GF5/).
+To build the site locally, run:
 
 ```bash
 python docs/build_site.py
