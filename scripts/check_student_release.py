@@ -27,6 +27,7 @@ FORBIDDEN_PATHS = (
     "human_character_demo",
     "libraries",
     "nvdiffrast",
+    "staff_tools",
     "viewer/__pycache__",
     "viewer/CONVENTIONS.md",
     "viewer/COORDINATES_AND_ENV.md",

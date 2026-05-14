@@ -30,6 +30,7 @@ assets/smpl/
 
 # Staff/reference implementations must not be committed to the student repo
 viewer/reference_impl/
+staff_tools/
 
 # Local release marker
 .gf5_student_release

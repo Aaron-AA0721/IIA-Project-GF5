@@ -1538,10 +1538,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--smplx-model",
-        default=str(
-            project_root.parent
-            / "UP2You/human_models/models/smplx/SMPLX_NEUTRAL.pkl"
-        ),
+        default="",
         help=(
             "Legacy option kept for older launch scripts. Current avatar packages "
             "must include precomputed GF5 SMPL-24 skinning weights."
