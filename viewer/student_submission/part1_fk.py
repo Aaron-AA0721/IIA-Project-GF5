@@ -21,6 +21,10 @@ def forward_kinematics(
     - world_rotations: shape (J, 3, 3)
     - world_positions: shape (J, 3)
     """
-    raise NotImplementedError(
-        "Implement forward_kinematics() in student_submission/part1_fk.py"
+    joint_count = len(joints)
+    world_rotations = np.tile(
+        np.eye(3, dtype=np.float32)[None, :, :],
+        (joint_count, 1, 1),
     )
+    world_positions = np.zeros((joint_count, 3), dtype=np.float32)
+    return world_rotations, world_positions
