@@ -130,6 +130,15 @@ a:focus {
   position: relative;
 }
 
+.nav-dropdown::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 100%;
+  width: max(100%, 13rem);
+  height: 0.45rem;
+}
+
 .nav-dropdown-trigger {
   gap: 0.38rem;
 }
@@ -147,7 +156,7 @@ a:focus {
 .nav-dropdown-menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 0.38rem);
+  top: calc(100% + 0.18rem);
   z-index: 30;
   min-width: 13rem;
   padding: 0.35rem;
