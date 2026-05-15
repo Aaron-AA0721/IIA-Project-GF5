@@ -161,7 +161,7 @@ SCHEDULE_WEEKS = [
         "label": "Intro",
         "dates": "15 May",
         "am": {"Fri": [("mandatory", "Intro session", "9-11, LR11")]},
-        "pm": {"Fri": [("help", "Help", "3-4, LR11")]},
+        "pm": {"Fri": [("help", "Help", "14-16, LR11")]},
     },
     {
         "label": "Week 1",
