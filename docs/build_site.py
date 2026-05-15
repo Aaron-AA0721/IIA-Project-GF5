@@ -505,15 +505,33 @@ class MarkdownRenderer:
 
 
 def render_nav(current: Page) -> str:
-    items: list[tuple[str, str, bool]] = []
-    for page in PAGES:
-        items.append((page.nav_label, page.output, page == current))
-    items.append(("Slides", "intro.html", False))
-
-    links = []
-    for label, href, active in items:
+    def nav_link(label: str, href: str, active: bool = False, class_name: str = "") -> str:
         aria = ' aria-current="page"' if active else ""
-        links.append(f'          <a href="{href}"{aria}>{html.escape(label)}</a>')
+        class_attr = f' class="{html.escape(class_name, quote=True)}"' if class_name else ""
+        return f'          <a href="{html.escape(href, quote=True)}"{class_attr}{aria}>{html.escape(label)}</a>'
+
+    overview = PAGES[0]
+    material_pages = PAGES[1:]
+    material_active = current in material_pages
+    material_class = "nav-dropdown is-active" if material_active else "nav-dropdown"
+    material_links = "\n".join(
+        nav_link(page.nav_label, page.output, page == current) for page in material_pages
+    )
+    github_href = html.escape(GITHUB_REPOSITORY_URL, quote=True)
+    links = [
+        nav_link(overview.nav_label, overview.output, current == overview),
+        f"""          <details class="{material_class}">
+            <summary>Materials</summary>
+            <div class="nav-dropdown-menu">
+{material_links}
+            </div>
+          </details>""",
+        nav_link("Slides", "intro.html"),
+        (
+            f'          <a class="nav-github-button" href="{github_href}" '
+            'target="_blank" rel="noreferrer">GitHub</a>'
+        ),
+    ]
     return "\n".join(links)
 
 

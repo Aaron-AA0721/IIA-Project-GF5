@@ -109,7 +109,8 @@ a:focus {
   gap: 0.35rem;
 }
 
-.nav-links a {
+.nav-links a,
+.nav-dropdown summary {
   display: inline-flex;
   align-items: center;
   min-height: 2.25rem;
@@ -120,11 +121,71 @@ a:focus {
   font-size: 0.94rem;
 }
 
+.nav-dropdown {
+  position: relative;
+}
+
+.nav-dropdown summary {
+  gap: 0.38rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.nav-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.nav-dropdown summary::after {
+  content: "";
+  width: 0.42rem;
+  height: 0.42rem;
+  border-right: 0.12rem solid currentColor;
+  border-bottom: 0.12rem solid currentColor;
+  transform: translateY(-0.12rem) rotate(45deg);
+}
+
+.nav-dropdown[open] summary::after {
+  transform: translateY(0.1rem) rotate(225deg);
+}
+
+.nav-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.38rem);
+  z-index: 30;
+  min-width: 13rem;
+  padding: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.nav-dropdown-menu a {
+  width: 100%;
+  justify-content: flex-start;
+}
+
 .nav-links a:hover,
 .nav-links a:focus,
-.nav-links a[aria-current="page"] {
+.nav-links a[aria-current="page"],
+.nav-dropdown summary:hover,
+.nav-dropdown summary:focus,
+.nav-dropdown.is-active summary {
   background: var(--surface-strong);
   color: var(--teal);
+}
+
+.nav-links a.nav-github-button {
+  background: var(--ink);
+  color: #fff;
+  font-weight: 800;
+}
+
+.nav-links a.nav-github-button:hover,
+.nav-links a.nav-github-button:focus {
+  background: var(--teal);
+  color: #fff;
 }
 
 .page {
@@ -965,6 +1026,17 @@ pre code {
 
   .nav-links {
     justify-content: flex-start;
+  }
+
+  .nav-dropdown,
+  .nav-dropdown-menu {
+    width: 100%;
+  }
+
+  .nav-dropdown-menu {
+    position: static;
+    margin-top: 0.25rem;
+    box-shadow: none;
   }
 
   .page {
