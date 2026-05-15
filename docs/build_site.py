@@ -20,6 +20,8 @@ ROOT = Path(__file__).resolve().parent
 DEFAULT_OUTPUT = ROOT.parent / "site"
 SITE_TITLE = "GF5: Animating 3D Characters"
 GITHUB_REPOSITORY_URL = "https://github.com/CambridgeCVCourses/IIA-Project-GF5"
+COPYRIGHT_OWNER = "Elliott (Shangzhe) Wu"
+COPYRIGHT_OWNER_URL = "https://www.elliottwu.com/"
 
 
 @dataclass(frozen=True)
@@ -658,7 +660,15 @@ def render_page(
 
     <footer class="footer">
       <div class="footer-inner">
-        Generated from Markdown source: <a href="{html.escape(source_href, quote=True)}">{html.escape(page.source)}</a>.
+        <p>
+          Copyright &copy; 2026
+          <a href="{html.escape(COPYRIGHT_OWNER_URL, quote=True)}">{html.escape(COPYRIGHT_OWNER)}</a>.
+          Released under the <a href="LICENSE">MIT License</a>.
+        </p>
+        <p>
+          Generated from Markdown source:
+          <a href="{html.escape(source_href, quote=True)}">{html.escape(page.source)}</a>.
+        </p>
       </div>
     </footer>
   </body>
@@ -678,6 +688,7 @@ def build_site(output: Path, *, source_base_url: str | None = None) -> None:
     if assets_output.exists():
         shutil.rmtree(assets_output)
     shutil.copytree(ROOT / "assets", assets_output)
+    shutil.copy2(ROOT.parent / "LICENSE", output / "LICENSE")
     (output / ".nojekyll").write_text("", encoding="utf-8")
     source_relative_base = Path(os.path.relpath(ROOT, output)).as_posix()
 

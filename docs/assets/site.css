@@ -921,8 +921,17 @@ pre code {
   max-width: 1180px;
   margin: 0 auto;
   padding: 1.4rem 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem 1.2rem;
   color: var(--muted);
   font-size: 0.93rem;
+}
+
+.footer-inner p {
+  margin: 0;
 }
 
 @media (max-width: 920px) {

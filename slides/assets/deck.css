@@ -1083,7 +1083,8 @@
 }
 
 .deck-page.is-fullscreen .deck-header,
-.deck-page.is-fullscreen .notes-panel {
+.deck-page.is-fullscreen .notes-panel,
+.deck-page.is-fullscreen .deck-footer {
   display: none;
 }
 
@@ -1353,6 +1354,7 @@
 
   .deck-header,
   .notes-panel,
+  .deck-footer,
   .skip-link {
     display: none !important;
   }

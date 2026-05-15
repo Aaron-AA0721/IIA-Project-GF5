@@ -22,6 +22,8 @@ DOCS_ROOT = PROJECT_ROOT / "docs"
 sys.path.insert(0, str(DOCS_ROOT))
 
 from build_site import (
+    COPYRIGHT_OWNER,
+    COPYRIGHT_OWNER_URL,
     GITHUB_REPOSITORY_URL,
     MarkdownRenderer,
     SITE_TITLE,
@@ -615,6 +617,20 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
       </aside>
     </main>
 
+    <footer class="footer deck-footer">
+      <div class="footer-inner">
+        <p>
+          Copyright &copy; 2026
+          <a href="{html.escape(COPYRIGHT_OWNER_URL, quote=True)}">{html.escape(COPYRIGHT_OWNER)}</a>.
+          Released under the <a href="LICENSE">MIT License</a>.
+        </p>
+        <p>
+          Generated from slide source:
+          <a href="{html.escape(source_relative, quote=True)}">{html.escape(source.name)}</a>.
+        </p>
+      </div>
+    </footer>
+
     <script>
       (() => {{
         const slides = Array.from(document.querySelectorAll(".slide"));
@@ -1101,6 +1117,7 @@ def build_slides(source: Path, output: Path) -> None:
     assets_output.mkdir(parents=True, exist_ok=True)
     shutil.copytree(DOCS_ROOT / "assets", assets_output, dirs_exist_ok=True)
     shutil.copy2(ROOT / "assets" / STYLE_ASSET, assets_output / STYLE_ASSET)
+    shutil.copy2(PROJECT_ROOT / "LICENSE", output.parent / "LICENSE")
     output.write_text(render_html(source.resolve(), slides, output.parent), encoding="utf-8")
     display_path = output.relative_to(Path.cwd()) if output.is_relative_to(Path.cwd()) else output
     print(f"wrote {display_path} from {source.name}")
