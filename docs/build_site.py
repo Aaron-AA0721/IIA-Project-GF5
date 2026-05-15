@@ -212,6 +212,10 @@ SCHEDULE_WEEKS = [
         },
     },
 ]
+SCHEDULE_CALENDAR_NOTE = (
+    "Booking is no longer needed for the BE454 help sessions. "
+    "You can come to the office during the Help times shown in the calendar."
+)
 
 
 def schedule_calendar_embed(markdown: str = "") -> str:
@@ -271,7 +275,9 @@ def schedule_calendar_embed(markdown: str = "") -> str:
         + "</tr></thead>"
         "<tbody>"
         + "".join(rows)
-        + "</tbody></table></section>"
+        + "</tbody></table>"
+        f'<p class="calendar-note">{html.escape(SCHEDULE_CALENDAR_NOTE)}</p>'
+        "</section>"
     )
 
 

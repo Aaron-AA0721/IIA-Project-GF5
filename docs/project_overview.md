@@ -58,9 +58,6 @@ large authoring package.
 
 {{schedule-calendar: project}}
 
-For the BE454 help sessions, a booking system will be set up later so that too
-many people do not arrive at the same time. You can still drop by the office.
-
 ## Intro Slides
 
 Open the [hosted intro slides](../slides/intro.md) for the first session. The

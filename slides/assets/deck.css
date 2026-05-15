@@ -835,6 +835,13 @@
   margin: 0 0 0.38rem;
 }
 
+.calendar-note {
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
 .calendar-table {
   width: var(--calendar-table-width);
   min-width: var(--calendar-table-width);

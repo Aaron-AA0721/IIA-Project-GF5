@@ -844,6 +844,13 @@ pre code {
   margin: 0 0 0.38rem;
 }
 
+.calendar-note {
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+  font-size: 0.96rem;
+  line-height: 1.45;
+}
+
 .calendar-table {
   width: var(--calendar-table-width);
   min-width: var(--calendar-table-width);
