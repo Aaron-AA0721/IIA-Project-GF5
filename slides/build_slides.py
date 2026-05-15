@@ -573,6 +573,7 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{html.escape(html_title)}</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="assets/site.css">
     <link rel="stylesheet" href="assets/{STYLE_ASSET}">
   </head>
