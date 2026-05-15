@@ -332,6 +332,10 @@
   display: none;
 }
 
+.deck-page.is-printing .slide {
+  display: block;
+}
+
 .slide.is-active {
   display: grid;
   min-height: calc(100vh - 8.75rem);
@@ -1355,9 +1359,9 @@
 
   .deck {
     display: block !important;
-    width: var(--slide-stage-width);
+    width: 100%;
     max-width: none;
-    margin: 0 auto;
+    margin: 0;
     padding: 0;
   }
 
@@ -1368,11 +1372,13 @@
 
   .slide,
   .slide.is-active {
-    display: block !important;
-    width: var(--slide-stage-width);
-    height: var(--slide-stage-height);
-    min-height: 0;
-    margin: 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    min-height: 100vh;
+    margin: 0;
     break-after: page;
     page-break-after: always;
     page-break-inside: avoid;
@@ -1384,10 +1390,12 @@
   }
 
   .slide-canvas {
+    flex: 0 0 auto;
     width: var(--slide-stage-width);
     height: var(--slide-stage-height);
     min-height: 0;
     aspect-ratio: auto;
+    margin: 0;
     padding: 0;
     border: 0;
     border-radius: 0;

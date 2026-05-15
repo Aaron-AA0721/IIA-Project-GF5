@@ -913,12 +913,29 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
           root.style.setProperty("--deck-fullscreen-scale", scale.toFixed(3));
         }}
 
+        function nextFrame() {{
+          return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+        }}
+
+        function preparePrintLayout() {{
+          root.classList.add("is-printing");
+          fitAllSlides();
+        }}
+
+        function cleanupPrintLayout() {{
+          root.classList.remove("is-printing");
+          refreshSlideLayout();
+        }}
+
         async function printSlides() {{
           if (document.fullscreenElement) {{
             await document.exitFullscreen();
           }}
+          root.classList.add("is-printing");
+          await nextFrame();
           fitAllSlides();
-          requestAnimationFrame(() => window.print());
+          await nextFrame();
+          window.print();
         }}
 
         function fitSlideTitle(slide) {{
@@ -1026,6 +1043,8 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
         }});
         printButton.addEventListener("click", printSlides);
         document.addEventListener("fullscreenchange", updateFullscreenState);
+        window.addEventListener("beforeprint", preparePrintLayout);
+        window.addEventListener("afterprint", cleanupPrintLayout);
         window.addEventListener("resize", refreshSlideLayout);
         refreshAfterMediaLoads();
 
