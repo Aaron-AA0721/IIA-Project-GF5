@@ -577,7 +577,8 @@ def render_hero(page: Page, doc: RenderedDocument) -> str:
           <p class="eyebrow">{eyebrow}</p>
           <h1>{title}</h1>
           <p class="lede">The Markdown handouts are the source of truth; this page is generated from them for the student-facing release.</p>
-{actions}          <p class="instructor-line"><strong>Instructor:</strong> <a href="https://www.elliottwu.com/">Elliott (Shangzhe) Wu</a></p>
+          <p class="instructor-line"><strong>Instructor:</strong> <a href="https://www.elliottwu.com/">Elliott (Shangzhe) Wu</a></p>
+{actions}
         </div>
         <figure class="visual-panel" aria-label="Animation viewer preview">
           <img src="assets/gf5-rig-preview.svg" alt="Diagram of the GF5 viewer showing a block character, skeleton, skinning weights, and a timeline.">
