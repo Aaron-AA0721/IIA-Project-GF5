@@ -63,15 +63,12 @@ many people do not arrive at the same time. You can still drop by the office.
 
 ## Intro Slides
 
-Use the [intro slides](../slides/intro.md) for the first session.
+Open the [hosted intro slides](../slides/intro.md) for the first session. The
+Notes panel works on the hosted page; notes are cached in the browser on that
+device.
 
-For quick viewing, open the slides from the project website. To open the same
-HTML locally without project-folder note saving, run
-`python3 docs/build_site.py`, then `python3 slides/build_slides.py`, and open
-`site/intro.html` in a browser.
-
-To keep your own notes in the project folder, run this from the repository
-root:
+To keep your own notes as a Markdown file in the project folder, run this from
+the repository root:
 
 ```bash
 python3 slides/serve.py
@@ -79,6 +76,9 @@ python3 slides/serve.py
 
 Then open `http://127.0.0.1:8095/intro.html`. Your notes are saved to
 `slides/student_notes/intro_notes.md`.
+
+To rebuild the same HTML locally, run `python3 docs/build_site.py` and then
+`python3 slides/build_slides.py`.
 
 ## Assumed Background
 

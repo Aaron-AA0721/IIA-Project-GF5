@@ -25,6 +25,9 @@ The project is organised into three parts:
 ## Intro Slides
 
 For quick viewing, open the [online intro slides](https://cambridgecvcourses.github.io/IIA-Project-GF5/intro.html).
+The Notes panel works there too; notes are cached in the browser on that
+device.
+
 To open the same HTML locally without project-folder note saving, run:
 
 ```bash
@@ -34,7 +37,8 @@ python3 slides/build_slides.py
 
 Then open `site/intro.html` in a browser.
 
-To save your own slide notes locally, run this from the repository root:
+To save your own slide notes as a Markdown file in the project folder, run this
+from the repository root:
 
 ```bash
 python3 slides/serve.py

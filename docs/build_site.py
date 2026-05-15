@@ -506,6 +506,7 @@ def render_nav(current: Page) -> str:
     items: list[tuple[str, str, bool]] = []
     for page in PAGES:
         items.append((page.nav_label, page.output, page == current))
+    items.append(("Slides", "intro.html", False))
 
     links = []
     for label, href, active in items:

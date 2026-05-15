@@ -1,7 +1,9 @@
 # GF5 Intro Slides
 
-For quick viewing, open the online intro slides from the project page. To open
-the same HTML locally without project-folder note saving, run:
+For quick viewing, open the online intro slides from the project page. The
+Notes panel works there too; notes are cached in the browser on that device.
+
+To open the same HTML locally without project-folder note saving, run:
 
 ```bash
 python3 docs/build_site.py
@@ -10,7 +12,8 @@ python3 slides/build_slides.py
 
 Then open `site/intro.html` in a browser.
 
-To save your own notes locally, run this from the repository root:
+To save your own notes as a Markdown file in the project folder, run this from
+the repository root:
 
 ```bash
 python3 slides/serve.py
