@@ -503,12 +503,14 @@ def render_slides(slides: list[Slide]) -> str:
         hidden = "false" if slide.index == 1 else "true"
         rendered.append(
             f"""        <article class="{' '.join(classes)}" data-slide="{slide.index}" data-title="{html.escape(slide.title, quote=True)}" aria-hidden="{hidden}" aria-label="Slide {slide.index} of {total}: {html.escape(slide.title, quote=True)}">
-          <div class="slide-canvas">
-            <div class="slide-content">
-              <div class="slide-fit">
+          <div class="slide-stage">
+            <div class="slide-canvas">
+              <div class="slide-content">
+                <div class="slide-fit">
 {indent(slide.body, 14)}
+                </div>
+                <div class="slide-number" aria-hidden="true">{slide.index} / {total}</div>
               </div>
-              <div class="slide-number" aria-hidden="true">{slide.index} / {total}</div>
             </div>
           </div>
           <aside class="slide-notes">
@@ -936,6 +938,7 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
         function updateResponsiveStageSize() {{
           if (document.fullscreenElement || root.classList.contains("is-printing")) {{
             root.style.removeProperty("--deck-slide-width");
+            root.style.removeProperty("--deck-stage-scale");
             return;
           }}
           if (!deck || !slidesRegion) {{
@@ -956,8 +959,9 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
           const width = narrowScreen
             ? Math.min(designWidth, availableWidth)
             : Math.min(designWidth, availableWidth, heightLimitedWidth);
-          const minWidth = Math.min(280, availableWidth);
-          root.style.setProperty("--deck-slide-width", `${{Math.max(minWidth, width).toFixed(1)}}px`);
+          const stageWidth = Math.max(1, width);
+          root.style.setProperty("--deck-slide-width", `${{stageWidth.toFixed(1)}}px`);
+          root.style.setProperty("--deck-stage-scale", `${{(stageWidth / designWidth).toFixed(4)}}`);
         }}
 
         function nextFrame() {{
@@ -991,8 +995,8 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
           if (!content || !title) {{
             return;
           }}
-          let size = window.matchMedia("(max-width: 760px)").matches ? 2.0 : 2.55;
-          const minSize = window.matchMedia("(max-width: 760px)").matches ? 1.55 : 1.85;
+          let size = 2.55;
+          const minSize = 1.85;
           content.style.setProperty("--slide-title-size", `${{size.toFixed(2)}}rem`);
           while (
             (title.scrollHeight > title.clientHeight + 1 || title.scrollWidth > title.clientWidth + 1)
@@ -1039,11 +1043,11 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
         }}
 
         function updateNotesPanelHeight(slide = slides[current]) {{
-          const canvas = slide ? slide.querySelector(".slide-canvas") : null;
-          if (!canvas) {{
+          const stage = slide ? slide.querySelector(".slide-stage") : null;
+          if (!stage) {{
             return;
           }}
-          const height = canvas.getBoundingClientRect().height;
+          const height = stage.getBoundingClientRect().height;
           if (height > 0) {{
             root.style.setProperty("--active-slide-height", `${{height.toFixed(1)}}px`);
           }}
