@@ -669,6 +669,27 @@
   line-height: 1.32;
 }
 
+.table-clip {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: var(--radius);
+}
+
+.assessment-table-clip {
+  margin: 1rem 0 0;
+}
+
+.assessment-table-clip .slide-table {
+  margin: 0;
+}
+
+.assessment-table-clip .assessment-table {
+  min-width: 56rem;
+  table-layout: fixed;
+}
+
 .slide-table {
   width: 100%;
   margin: 1rem 0 0;

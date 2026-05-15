@@ -440,6 +440,9 @@ class MarkdownRenderer:
         headers = rows[0]
         body_rows = rows[2:]
         table_class = table_class_for(headers)
+        should_clip_table = "assessment-table" in table_class.split()
+        if should_clip_table:
+            self.out.append('<div class="table-clip assessment-table-clip">')
         self.out.append(f'<table class="{table_class}">')
         self.out.append("  <thead>")
         self.out.append("    <tr>")
@@ -456,6 +459,8 @@ class MarkdownRenderer:
             self.out.append("    </tr>")
         self.out.append("  </tbody>")
         self.out.append("</table>")
+        if should_clip_table:
+            self.out.append("</div>")
 
     def close_paragraph(self) -> None:
         if self.paragraph:
