@@ -576,6 +576,7 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="assets/site.css">
     <link rel="stylesheet" href="assets/{STYLE_ASSET}">
+    <script src="assets/site.js" defer></script>
   </head>
   <body class="deck-page" data-deck="{html.escape(source.stem, quote=True)}">
     <a class="skip-link" href="#deck">Skip to slides</a>

@@ -531,9 +531,9 @@ def render_nav(current: Page | None, *, slides_active: bool = False) -> str:
     github_href = html.escape(GITHUB_REPOSITORY_URL, quote=True)
     links = [
         nav_link(overview.nav_label, overview.output, current == overview),
-        f"""          <div class="{material_class}">
-            <button class="nav-dropdown-trigger" type="button" aria-haspopup="true">Materials</button>
-            <div class="nav-dropdown-menu">
+        f"""          <div class="{material_class}" data-nav-dropdown>
+            <button class="nav-dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" data-nav-dropdown-trigger>Materials</button>
+            <div class="nav-dropdown-menu" data-nav-dropdown-menu>
 {material_links}
             </div>
           </div>""",
@@ -665,6 +665,7 @@ def render_page(
     <title>{html.escape(html_title)}</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="assets/site.css">
+    <script src="assets/site.js" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
