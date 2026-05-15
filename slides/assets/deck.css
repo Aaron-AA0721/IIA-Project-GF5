@@ -32,7 +32,7 @@
 .deck-toolbar {
   max-width: 1180px;
   margin: 0 auto;
-  padding: 0 1.25rem 0.56rem;
+  padding: 0.68rem 1.25rem 0.56rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
