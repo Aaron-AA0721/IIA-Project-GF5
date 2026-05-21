@@ -427,7 +427,7 @@ vertex instead of forcing a single rigid owner.
 
 {{bullets: ../docs/interim.md#What To Submit}}
 
-[Submit on Moodle/VLE](https://www.vle.cam.ac.uk/mod/assign/view.php?id=19560071)
+[Submit on Moodle](https://www.vle.cam.ac.uk/mod/assign/view.php?id=19560071)
 
 ???
 Make this feel practical. The report is not separate from the coding work:
