@@ -49,6 +49,7 @@ from skeleton_profiles import (
 )
 from smpl_support import (
     SmplModelData,
+    format_exception_summary,
     get_skinning_weights,
     load_smpl_model_data,
     rotate_points_to_viewer,
@@ -98,6 +99,7 @@ class AssetData:
     mesh_vertex_colors: np.ndarray | None = None
     smpl_model_data: SmplModelData | None = None
     skinned_model_data: Any | None = None
+    skinning_error: str | None = None
 
 
 @dataclass
@@ -1055,6 +1057,7 @@ def load_asset(path: Path) -> AssetData:
 
 def load_smpl_asset(model_path: Path) -> AssetData:
     smpl_model_data = load_smpl_model_data(model_path)
+    skinning_error = smpl_model_data.skinning_setup_error
     rest_positions = smpl_model_data.rest_joints + smpl_model_data.ground_translation
     joints: list[JointSpec] = []
     bone_edges: list[tuple[int, int]] = []
@@ -1093,7 +1096,8 @@ def load_smpl_asset(model_path: Path) -> AssetData:
         mesh_vertices=np.asarray(mesh_vertices, dtype=np.float32),
         mesh_faces=smpl_model_data.faces,
         smpl_model_data=smpl_model_data,
-        skinned_model_data=smpl_model_data,
+        skinned_model_data=None if skinning_error is not None else smpl_model_data,
+        skinning_error=skinning_error,
     )
     asset.joint_palette = build_joint_palette(asset)
     return asset
@@ -1657,6 +1661,9 @@ def main() -> None:
         show_joint_labels_checkbox = server.gui.add_checkbox("Label Joints", initial_value=False)
         show_joint_axes_checkbox = server.gui.add_checkbox("Show Joint Axes", initial_value=False)
         use_lbs_checkbox = server.gui.add_checkbox("Use LBS", initial_value=False, disabled=True)
+        skinning_status_text = server.gui.add_html(
+            format_status_html("Skinning", "Load an asset to inspect skinning.")
+        )
         reset_button = server.gui.add_button("Reset Pose")
 
     with server.gui.add_folder("Joint Editor"):
@@ -1939,9 +1946,16 @@ def main() -> None:
         update_animation_controls()
 
     def update_animation_controls() -> None:
-        can_animate = state.asset is not None and selected_motion_is_animatable()
-        animate_checkbox.disabled = not can_animate
-        if not can_animate and animate_checkbox.value:
+        skinning_ready = state.asset is None or state.asset.skinning_error is None
+        can_preview_motion = (
+            state.asset is not None
+            and selected_motion_is_animatable()
+            and skinning_ready
+        )
+        motion_preview_time_slider.disabled = not can_preview_motion
+        animate_checkbox.disabled = not can_preview_motion
+        export_video_button.disabled = state.is_exporting_video or not can_preview_motion
+        if not can_preview_motion and animate_checkbox.value:
             animate_checkbox.value = False
 
     def selected_motion_export_duration() -> float:
@@ -2050,13 +2064,37 @@ def main() -> None:
 
     def update_skinning_controls() -> None:
         has_asset = state.asset is not None
-        is_skinned = has_asset and state.asset.skinned_model_data is not None
+        is_skinned = (
+            has_asset
+            and state.asset.skinned_model_data is not None
+            and state.asset.skinning_error is None
+        )
         use_lbs_checkbox.disabled = not is_skinned
-        show_skinning_weights_checkbox.disabled = not has_asset
+        show_skinning_weights_checkbox.disabled = (
+            not has_asset
+            or (
+                state.asset.asset_kind != "rigid"
+                and not is_skinned
+            )
+        )
         if not is_skinned:
             state.suppress_use_lbs_callbacks = True
             use_lbs_checkbox.value = False
             state.suppress_use_lbs_callbacks = False
+        if show_skinning_weights_checkbox.disabled and show_skinning_weights_checkbox.value:
+            show_skinning_weights_checkbox.value = False
+        if not has_asset:
+            set_markdown_status(skinning_status_text, "Skinning", "No asset loaded.")
+        elif state.asset.skinning_error is not None:
+            set_markdown_status(
+                skinning_status_text,
+                "Skinning",
+                f"Rest mesh only. {state.asset.skinning_error}",
+            )
+        elif is_skinned:
+            set_markdown_status(skinning_status_text, "Skinning", "SMPL skinning ready.")
+        else:
+            set_markdown_status(skinning_status_text, "Skinning", "Rigid asset.")
 
     def update_skinning_weight_overlay(mesh_vertices: np.ndarray | None) -> None:
         if (
@@ -2175,6 +2213,10 @@ def main() -> None:
 
     def preview_selected_motion(time_sec: float) -> None:
         if state.asset is None:
+            return
+        if state.asset.skinning_error is not None:
+            animate_checkbox.value = False
+            reset_current_pose()
             return
         try:
             pose_sample = sample_selected_motion(time_sec)
@@ -2635,12 +2677,28 @@ def main() -> None:
         mesh_vertices = None
         world_positions = fk_world_positions
         if state.asset.skinned_model_data is not None:
-            mesh_vertices = skin_smpl_mesh(
-                state.asset.skinned_model_data,
-                world_rotations,
-                world_positions,
-                use_blended_weights=use_lbs_checkbox.value,
-            )
+            try:
+                mesh_vertices = skin_smpl_mesh(
+                    state.asset.skinned_model_data,
+                    world_rotations,
+                    world_positions,
+                    use_blended_weights=use_lbs_checkbox.value,
+                )
+            except Exception as exc:
+                state.asset.skinning_error = (
+                    "Part 2 mesh skinning is not ready: "
+                    f"{format_exception_summary(exc)}"
+                )
+                state.asset.skinned_model_data = None
+                animate_checkbox.value = False
+                update_skinning_controls()
+                update_animation_controls()
+                traceback.print_exc()
+                mesh_vertices = (
+                    np.asarray(state.asset.mesh_vertices, dtype=np.float32)
+                    if state.asset.mesh_vertices is not None
+                    else None
+                )
         state.current_local_rotations = copy_rotations(local_rotations)
         state.current_root_offset = root_offset.copy()
         state.current_world_rotations = world_rotations.copy()
@@ -2725,7 +2783,11 @@ def main() -> None:
             refresh_saved_pose_options()
             update_motion_preview_controls()
             sync_motion_preview_time_control(0.0)
-            preview_selected_motion(0.0)
+            if asset.skinning_error is not None:
+                animate_checkbox.value = False
+                reset_current_pose()
+            else:
+                preview_selected_motion(0.0)
 
             if state.joint_marker_handles is not None:
                 for joint_index, marker_handle in enumerate(state.joint_marker_handles):
@@ -3365,6 +3427,9 @@ def main() -> None:
         if state.asset is None:
             set_markdown_status(video_status_text, "Video Export", "No asset loaded")
             return
+        if state.asset.skinning_error is not None:
+            set_markdown_status(video_status_text, "Video Export", "Implement Part 2 skinning before exporting motion")
+            return
         if state.is_exporting_video:
             set_markdown_status(video_status_text, "Video Export", "Video export already in progress")
             return
@@ -3444,7 +3509,7 @@ def main() -> None:
             if previous_local_rotations is not None and previous_root_offset is not None:
                 show_pose(previous_local_rotations, previous_root_offset)
             state.is_exporting_video = False
-            export_video_button.disabled = False
+            update_animation_controls()
 
     load_selected_asset()
     update_video_duration_control()

@@ -24,11 +24,11 @@ sys.path.insert(0, str(DOCS_ROOT))
 from build_site import (
     COPYRIGHT_OWNER,
     COPYRIGHT_OWNER_URL,
-    GITHUB_REPOSITORY_URL,
     MarkdownRenderer,
     SITE_TITLE,
     format_inline,
     indent,
+    render_nav,
     rewrite_href,
     schedule_calendar_embed,
     slugify,
@@ -104,6 +104,9 @@ class SlideMarkdownRenderer(MarkdownRenderer):
         headers = rows[0]
         body_rows = rows[2:]
         table_class = table_class_for(headers)
+        should_clip_table = "assessment-table" in table_class.split()
+        if should_clip_table:
+            self.out.append('<div class="table-clip assessment-table-clip">')
         self.out.append(f'<table class="{table_class}">')
         self.out.append("  <thead>")
         self.out.append("    <tr>")
@@ -120,6 +123,8 @@ class SlideMarkdownRenderer(MarkdownRenderer):
             self.out.append("    </tr>")
         self.out.append("  </tbody>")
         self.out.append("</table>")
+        if should_clip_table:
+            self.out.append("</div>")
 
     def close_blocks(self) -> None:
         self.close_table()
@@ -161,20 +166,61 @@ def youtube_video_id(source: str) -> str:
     return match.group(1) if match else source
 
 
+def youtube_time_seconds(value: str) -> int | None:
+    value = value.strip()
+    if value.isdigit():
+        return int(value)
+
+    total = 0
+    for match in re.finditer(r"(\d+)([hms])", value):
+        amount = int(match.group(1))
+        unit = match.group(2)
+        if unit == "h":
+            total += amount * 3600
+        elif unit == "m":
+            total += amount * 60
+        else:
+            total += amount
+    return total if total else None
+
+
+def youtube_start_seconds(source: str) -> int | None:
+    match = re.search(r"[?&#](?:t|start)=([0-9hms]+)", source.strip())
+    if not match:
+        return None
+    return youtube_time_seconds(match.group(1))
+
+
+def youtube_watch_url(source: str) -> str:
+    video_id = youtube_video_id(source)
+    if start_seconds := youtube_start_seconds(source):
+        return f"https://youtu.be/{video_id}?t={start_seconds}"
+    return f"https://youtu.be/{video_id}"
+
+
 def youtube_embed(markdown: str) -> str:
     fields = split_directive_fields(markdown)
     if not fields or not fields[0]:
         raise SystemExit("YouTube slide directive is missing a video id")
 
     video_id = html.escape(youtube_video_id(fields[0]), quote=True)
+    query_parts = ["rel=0"]
+    if (start_seconds := youtube_start_seconds(fields[0])) is not None:
+        query_parts.append(f"start={start_seconds}")
+    query = "&".join(query_parts)
     title = fields[1] if len(fields) > 1 and fields[1] else "YouTube video"
     caption = fields[2] if len(fields) > 2 else ""
     title_attr = html.escape(strip_inline_markdown(title), quote=True)
-    caption_html = f"<figcaption>{format_inline(caption)}</figcaption>" if caption else ""
+    fallback_href = html.escape(youtube_watch_url(fields[0]), quote=True)
+    caption_parts = [format_inline(caption)] if caption else []
+    caption_parts.append(
+        f'<a href="{fallback_href}" target="_blank" rel="noreferrer">Open on YouTube</a>'
+    )
+    caption_html = f"<figcaption>{' '.join(caption_parts)}</figcaption>"
     return (
         '<figure class="media-embed youtube-embed">'
         '<div class="media-frame">'
-        f'    <iframe src="https://www.youtube-nocookie.com/embed/{video_id}?rel=0" '
+        f'    <iframe src="https://www.youtube-nocookie.com/embed/{video_id}?{query}" '
         f'title="{title_attr}" loading="lazy" allowfullscreen '
         'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; '
         'picture-in-picture; web-share"></iframe>'
@@ -503,12 +549,14 @@ def render_slides(slides: list[Slide]) -> str:
         hidden = "false" if slide.index == 1 else "true"
         rendered.append(
             f"""        <article class="{' '.join(classes)}" data-slide="{slide.index}" data-title="{html.escape(slide.title, quote=True)}" aria-hidden="{hidden}" aria-label="Slide {slide.index} of {total}: {html.escape(slide.title, quote=True)}">
-          <div class="slide-canvas">
-            <div class="slide-content">
-              <div class="slide-fit">
+          <div class="slide-stage">
+            <div class="slide-canvas">
+              <div class="slide-content">
+                <div class="slide-fit">
 {indent(slide.body, 14)}
+                </div>
+                <div class="slide-number" aria-hidden="true">{slide.index} / {total}</div>
               </div>
-              <div class="slide-number" aria-hidden="true">{slide.index} / {total}</div>
             </div>
           </div>
           <aside class="slide-notes">
@@ -524,7 +572,7 @@ def render_section_nav(slides: list[Slide]) -> str:
         ("Intro", "Bring A Character To Life"),
         ("Logistics", "Four-Week Timeline"),
         ("Week 1", "Week 1: Forward Kinematics"),
-        ("Week 2", "Part 2: Skinning And SMPL"),
+        ("Week 2", "Week 2: Skinning And SMPL"),
         ("Reports", "Interim Checkpoint"),
         ("Beyond", "Parts 3 And 4"),
         ("Policy", "AI Use Policy"),
@@ -559,7 +607,6 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
     title = slides[0].title if slides else "Intro Session"
     html_title = SITE_TITLE if title == SITE_TITLE else f"{title} | {SITE_TITLE}"
     source_relative = Path(os.path.relpath(source, output_dir)).as_posix()
-    github_href = html.escape(GITHUB_REPOSITORY_URL, quote=True)
     return f"""<!doctype html>
 <!-- Generated from {html.escape(source.name)} by slides/build_slides.py. Do not edit by hand. -->
 <html lang="en">
@@ -567,23 +614,25 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{html.escape(html_title)}</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="assets/site.css">
     <link rel="stylesheet" href="assets/{STYLE_ASSET}">
+    <script src="assets/site.js" defer></script>
   </head>
   <body class="deck-page" data-deck="{html.escape(source.stem, quote=True)}">
     <a class="skip-link" href="#deck">Skip to slides</a>
-    <header class="deck-header">
-      <div class="deck-shell">
+    <header class="site-header">
+      <div class="nav-shell">
         <a class="brand" href="index.html" aria-label="GF5 home">
           <span class="brand-mark">GF5</span>
           <span>{html.escape(SITE_TITLE)}</span>
         </a>
-        <nav class="deck-links" aria-label="Presentation links">
-          <a href="index.html">Website</a>
-          <a href="{github_href}" target="_blank" rel="noreferrer">GitHub</a>
-          <a href="{html.escape(source_relative, quote=True)}">Source</a>
+        <nav class="nav-links" aria-label="Main navigation">
+{render_nav(None, slides_active=True)}
         </nav>
       </div>
+    </header>
+    <header class="deck-header" aria-label="Presentation controls">
       <div class="deck-toolbar" aria-label="Presentation controls">
         <div class="deck-control-cluster" aria-label="Slide movement">
           <button class="icon-button" type="button" data-action="first" aria-label="Return to first slide" title="First slide"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M5 19V5"></path><path d="m19 18-6-6 6-6"></path><path d="m13 18-6-6 6-6"></path></svg></button>
@@ -617,7 +666,7 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
       </aside>
     </main>
 
-    <footer class="footer deck-footer">
+    <footer class="footer">
       <div class="footer-inner">
         <p>
           Copyright &copy; 2026
@@ -647,6 +696,8 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
         const printButton = document.querySelector('[data-action="print"]');
         const downloadNotesButton = document.querySelector('[data-action="download-notes"]');
         const root = document.body;
+        const deck = document.querySelector(".deck");
+        const slidesRegion = document.querySelector(".slides");
         const notesApiUrl = "api/intro-notes";
         const noteCache = new Map();
         let current = 0;
@@ -907,8 +958,10 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
           document.body.classList.toggle("is-fullscreen", active);
           fullscreenLabel.textContent = active ? "Exit" : "Full";
           fullscreenButton.setAttribute("aria-label", active ? "Exit fullscreen" : "Enter fullscreen");
+          updateResponsiveStageSize();
           updateFullscreenScale();
           requestAnimationFrame(() => {{
+            updateResponsiveStageSize();
             fitActiveSlide();
             updateFullscreenScale();
           }});
@@ -927,6 +980,35 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
           const designHeight = parseFloat(styles.getPropertyValue("--slide-stage-height")) || 540;
           const scale = Math.max(0.1, Math.min(window.innerWidth / designWidth, window.innerHeight / designHeight));
           root.style.setProperty("--deck-fullscreen-scale", scale.toFixed(3));
+        }}
+
+        function updateResponsiveStageSize() {{
+          if (document.fullscreenElement || root.classList.contains("is-printing")) {{
+            root.style.removeProperty("--deck-slide-width");
+            root.style.removeProperty("--deck-stage-scale");
+            return;
+          }}
+          if (!deck || !slidesRegion) {{
+            return;
+          }}
+          const styles = getComputedStyle(root);
+          const designWidth = parseFloat(styles.getPropertyValue("--slide-stage-width")) || 960;
+          const designHeight = parseFloat(styles.getPropertyValue("--slide-stage-height")) || 540;
+          const aspect = designWidth / designHeight;
+          const slidesRect = slidesRegion.getBoundingClientRect();
+          const availableWidth = Math.max(0, slidesRect.width);
+          const availableHeight = Math.max(0, slidesRect.height);
+          if (!availableWidth) {{
+            return;
+          }}
+          const narrowScreen = window.matchMedia("(max-width: 760px)").matches;
+          const heightLimitedWidth = availableHeight ? availableHeight * aspect : designWidth;
+          const width = narrowScreen
+            ? Math.min(designWidth, availableWidth)
+            : Math.min(designWidth, availableWidth, heightLimitedWidth);
+          const stageWidth = Math.max(1, width);
+          root.style.setProperty("--deck-slide-width", `${{stageWidth.toFixed(1)}}px`);
+          root.style.setProperty("--deck-stage-scale", `${{(stageWidth / designWidth).toFixed(4)}}`);
         }}
 
         function nextFrame() {{
@@ -960,8 +1042,8 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
           if (!content || !title) {{
             return;
           }}
-          let size = window.matchMedia("(max-width: 760px)").matches ? 2.0 : 2.55;
-          const minSize = window.matchMedia("(max-width: 760px)").matches ? 1.55 : 1.85;
+          let size = 2.55;
+          const minSize = 1.85;
           content.style.setProperty("--slide-title-size", `${{size.toFixed(2)}}rem`);
           while (
             (title.scrollHeight > title.clientHeight + 1 || title.scrollWidth > title.clientWidth + 1)
@@ -1008,11 +1090,11 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
         }}
 
         function updateNotesPanelHeight(slide = slides[current]) {{
-          const canvas = slide ? slide.querySelector(".slide-canvas") : null;
-          if (!canvas) {{
+          const stage = slide ? slide.querySelector(".slide-stage") : null;
+          if (!stage) {{
             return;
           }}
-          const height = canvas.getBoundingClientRect().height;
+          const height = stage.getBoundingClientRect().height;
           if (height > 0) {{
             root.style.setProperty("--active-slide-height", `${{height.toFixed(1)}}px`);
           }}
@@ -1020,6 +1102,7 @@ def render_html(source: Path, slides: list[Slide], output_dir: Path) -> str:
 
         function refreshSlideLayout() {{
           requestAnimationFrame(() => {{
+            updateResponsiveStageSize();
             fitActiveSlide();
             updateFullscreenScale();
           }});
