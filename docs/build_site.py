@@ -197,7 +197,7 @@ def youtube_embed(markdown: str) -> str:
 SCHEDULE_COLUMNS = [
     ("Tue", "am", "Tue AM", "11-13"),
     ("Fri", "am", "Fri AM", "9-11"),
-    ("Fri", "pm", "Fri PM", "14-16 / 4pm"),
+    ("Fri", "pm", "Fri PM", "14-16 / due"),
 ]
 SCHEDULE_WEEKS = [
     {
@@ -220,12 +220,12 @@ SCHEDULE_WEEKS = [
         "dates": "25-29 May",
         "am": {
             "Tue": [("help", "Help", "11-13, BE454")],
-            "Fri": [("help", "Help", "9-11, BE454")],
+            "Fri": [("help", "Help", "9-10, BE454")],
         },
         "pm": {
             "Fri": [
                 ("mandatory", "Mandatory", "14-16, LR11"),
-                ("deadline", "Interim due", "4pm"),
+                ("deadline", "Interim due", "2pm"),
             ]
         },
     },
@@ -243,11 +243,9 @@ SCHEDULE_WEEKS = [
         "dates": "8-12 Jun",
         "am": {
             "Tue": [("presentation", "Final presentation", "11-13, LR5")],
-            "Fri": [("help", "Help", "9-11, BE454")],
         },
         "pm": {
             "Fri": [
-                ("mandatory", "Mandatory", "14-16, LR11"),
                 ("deadline", "Final report due", "4pm; animation due"),
             ]
         },
@@ -260,9 +258,21 @@ SCHEDULE_CALENDAR_NOTE = (
 
 
 def schedule_calendar_embed(markdown: str = "") -> str:
-    def render_event(kind: str, title: str, meta: str) -> str:
+    fields = split_directive_fields(markdown)
+    highlight_updates = any(field in {"updates", "highlight-updates"} for field in fields[1:])
+    highlighted_events = {
+        ("Week 2", "Fri", "am", "help", "Help", "9-10, BE454"),
+        ("Week 2", "Fri", "pm", "deadline", "Interim due", "2pm"),
+        ("Week 4", "Fri", "pm", "deadline", "Final report due", "4pm; animation due"),
+    }
+    highlighted_empty_cells = {("Week 4", "Fri", "am")}
+
+    def render_event(kind: str, title: str, meta: str, *, highlighted: bool = False) -> str:
+        classes = ["calendar-pin", f"is-{html.escape(kind, quote=True)}"]
+        if highlighted:
+            classes.append("is-highlighted")
         return (
-            f'<span class="calendar-pin is-{html.escape(kind, quote=True)}">'
+            f'<span class="{" ".join(classes)}">'
             '<span class="pin-dot" aria-hidden="true"></span>'
             "<span>"
             f"<strong>{html.escape(title)}</strong>"
@@ -282,11 +292,23 @@ def schedule_calendar_embed(markdown: str = "") -> str:
         ]
         for day, slot, _label, _meta in SCHEDULE_COLUMNS:
             events = week.get(slot, {}).get(day, [])
-            content = "".join(render_event(*event) for event in events)
+            content = "".join(
+                render_event(
+                    *event,
+                    highlighted=highlight_updates
+                    and (week["label"], day, slot, *event) in highlighted_events,
+                )
+                for event in events
+            )
             empty_class = " is-empty" if not content else ""
             multiple_class = " has-multiple" if len(events) > 1 else ""
+            highlight_class = (
+                " is-highlighted-empty"
+                if highlight_updates and (week["label"], day, slot) in highlighted_empty_cells
+                else ""
+            )
             cells.append(
-                f'<td class="calendar-cell{empty_class}{multiple_class}">'
+                f'<td class="calendar-cell{empty_class}{multiple_class}{highlight_class}">'
                 f'<div class="calendar-cell-inner">{content}</div>'
                 "</td>"
             )
@@ -314,11 +336,19 @@ def schedule_calendar_embed(markdown: str = "") -> str:
             for _day, _slot, label, meta in SCHEDULE_COLUMNS
         )
         + "</tr></thead>"
-        "<tbody>"
+        + "<tbody>"
         + "".join(rows)
         + "</tbody></table>"
-        f'<p class="calendar-note">{html.escape(SCHEDULE_CALENDAR_NOTE)}</p>'
-        "</section>"
+        + (
+            '<p class="calendar-change-note">'
+            "<strong>Updated:</strong> Fri 29 May help is 9-10; interim report and results are due 2pm; "
+            "Fri 12 Jun has no help or mandatory session."
+            "</p>"
+            if highlight_updates
+            else ""
+        )
+        + f'<p class="calendar-note">{html.escape(SCHEDULE_CALENDAR_NOTE)}</p>'
+        + "</section>"
     )
 
 

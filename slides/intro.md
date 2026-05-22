@@ -88,7 +88,7 @@ make a scene.
 {{assessment-table: ../docs/project_overview.md#Assessment}}
 
 ???
-Use exact dates: Friday 29 May 2026 at 4pm for interim items, Tuesday 9 June
+Use exact dates: Friday 29 May 2026 at 2pm for interim items, Tuesday 9 June
 2026 from 11am to 1pm for the final presentation, and Friday 12 June 2026 at
 4pm for final submissions.
 
@@ -234,6 +234,17 @@ separate rigid blocks.
 
 ---
 
+# Calendar Updates
+
+{{schedule-calendar: project | updates}}
+
+???
+Pause on the highlighted items: Friday 29 May help is now 9-10, interim report
+and required results are due at 2pm, and Friday 12 June has no help or
+mandatory session.
+
+---
+
 # Why Skinning Changes The Problem
 
 - same FK poses from Part 1
@@ -250,7 +261,7 @@ surface follows the motion they already made.
 
 # Skinning
 
-{{youtube: https://youtu.be/3RSwjZLClRc?t=226 | 3D Rigging is Beautiful, Here's How It Works! | A second pass focused on skinning: how the surface follows a rig instead of moving as separate rigid parts.}}
+{{youtube: https://youtu.be/3RSwjZLClRc?t=227 | 3D Rigging is Beautiful, Here's How It Works! | A second pass focused on skinning: how the surface follows a rig instead of moving as separate rigid parts.}}
 
 ???
 Show a short excerpt starting at the skinning/deformation portion. Connect it
@@ -424,6 +435,8 @@ vertex instead of forcing a single rigid owner.
 ---
 
 # Interim Checkpoint
+
+Deadline: Friday 29 May 2026, 2pm.
 
 {{bullets: ../docs/interim.md#What To Submit}}
 

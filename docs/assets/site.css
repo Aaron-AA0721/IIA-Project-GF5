@@ -853,6 +853,18 @@ pre code {
   line-height: 1.45;
 }
 
+.calendar-change-note {
+  margin: 0.55rem 0 0;
+  padding: 0.48rem 0.62rem;
+  border: 1px solid rgb(180 123 0 / 30%);
+  border-radius: 5px;
+  background: rgb(180 123 0 / 8%);
+  color: var(--ink);
+  font-size: 0.96rem;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
 .calendar-table {
   width: var(--calendar-table-width);
   min-width: var(--calendar-table-width);
@@ -960,6 +972,26 @@ pre code {
   background: #fbfdfe;
 }
 
+.calendar-cell.is-highlighted-empty {
+  background: rgb(180 123 0 / 7%);
+  box-shadow: inset 0 0 0 2px rgb(180 123 0 / 34%);
+}
+
+.calendar-cell.is-highlighted-empty .calendar-cell-inner::before {
+  content: "No session";
+  display: inline-grid;
+  width: var(--calendar-pin-width);
+  min-width: var(--calendar-pin-width);
+  max-width: var(--calendar-pin-width);
+  min-height: 2.1rem;
+  place-items: center;
+  border: 1px dashed rgb(180 123 0 / 45%);
+  border-radius: 5px;
+  color: #6f4a00;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
 .calendar-pin {
   --pin-color: var(--teal);
   box-sizing: border-box;
@@ -1029,6 +1061,12 @@ pre code {
   --pin-color: var(--gold);
   border-color: rgb(180 123 0 / 28%);
   background: rgb(180 123 0 / 8%);
+}
+
+.calendar-pin.is-highlighted {
+  box-shadow:
+    0 0 0 2px rgb(180 123 0 / 40%),
+    0 8px 14px rgb(30 42 50 / 10%);
 }
 
 .calendar-legend .calendar-pin {
