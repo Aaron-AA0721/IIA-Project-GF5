@@ -88,6 +88,12 @@ The viewer may create local working folders while you experiment:
 
 These folders are local outputs, not files you need to submit as source code.
 
+## Git Starter
+
+If Git commands are new to you, use the
+[Git starter guide](https://rogerdudler.github.io/git-guide/) as a quick
+reference for cloning, committing, pulling, and pushing.
+
 ## SMPL Model Files
 
 SMPL model files are not included in the repository. If you have access to
@@ -111,6 +117,8 @@ most common cause of `viewer/asset_viewer.py` not being found.
 
 If video export fails, check that `ffmpeg` is installed and available on
 `PATH`.
+
+For more setup notes, see the [FAQ](faq.md).
 
 ## Next Step
 

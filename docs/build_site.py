@@ -39,6 +39,7 @@ PAGES = [
     Page("part2.md", "part2.html", "Part 2", "Part 2"),
     Page("interim.md", "interim.html", "Interim", "Checkpoint"),
     Page("part3_placeholder.md", "part3.html", "Part 3", "Coming later"),
+    Page("faq.md", "faq.html", "FAQ", "Common questions"),
     Page("references.md", "references.html", "References", "Further reading"),
 ]
 
@@ -721,6 +722,7 @@ def render_page(
     html_title = SITE_TITLE if title == SITE_TITLE else f"{title} | {SITE_TITLE}"
     release_summary = render_release_summary() if page.output == "index.html" else ""
     toc = render_toc(doc)
+    article_class = "doc-content faq-content" if page.output == "faq.html" else "doc-content"
     if source_base_url:
         source_href = f"{source_base_url.rstrip('/')}/{page.source}"
     elif source_relative_base and source_relative_base != ".":
@@ -755,7 +757,7 @@ def render_page(
     <main id="main" class="page doc-page">
 {render_hero(page, doc)}{release_summary}
       <div class="doc-shell">
-{toc}        <article class="doc-content">
+{toc}        <article class="{article_class}">
 {indent(doc.body, 10)}
         </article>
       </div>
