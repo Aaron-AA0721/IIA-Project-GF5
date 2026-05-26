@@ -91,3 +91,24 @@ If Windows also reports an OpenMP duplicate-runtime warning, run:
 set KMP_DUPLICATE_LIB_OK=TRUE
 python viewer\asset_viewer.py --smpl-model assets\smpl\models\SMPL_MALE.pkl
 ```
+
+## 5. Why Does The Character Reconstruction Link Fail On Some WiFi Networks?
+
+If the character reconstruction link from the internal Part 3 page works on one
+network but fails on another with an error such as
+`DNS_PROBE_FINISHED_NXDOMAIN`, the most likely cause is DNS caching or filtering
+on that network. This can happen when a subdomain was created recently: one DNS
+resolver may know about it, while another may temporarily remember an older
+"does not exist" response.
+
+This is not usually a problem with the GF5 code or the reconstruction server.
+
+Temporary fixes:
+
+- try a different network, such as a mobile hotspot
+- in Chrome, enable Secure DNS with Cloudflare or Google:
+  `Settings -> Privacy and security -> Security -> Use secure DNS`
+- wait and try again later, since DNS caches usually expire automatically
+
+If you can reach the page on mobile data but not on WiFi, report the WiFi
+network name and the exact browser error message.
