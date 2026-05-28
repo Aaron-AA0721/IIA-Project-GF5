@@ -15,23 +15,23 @@ def forward_kinematics(
     def get_world_transform(joint):
         
         if(joint == -1):
-            return np.eye(3), np.zeros((3,))
+            return np.eye(3), root_offset
         if(joint_completed[joint]):
             return world_rotations[joint], world_positions[joint]
         parent = joints[joint].parent
         local_rotation = local_rotations[joint]
         local_position = joints[joint].translation
         
-        if(parent != -1):
-            parent_rotation, parent_position = get_world_transform(parent)
-            world_rotation = parent_rotation @ local_rotation
-            world_position = parent_position + parent_rotation @ local_position
-            joint_completed[joint] = True
-            return world_rotation, world_position
-        else:
-            world_position = local_position + root_offset
-            joint_completed[joint] = True
-            return local_rotation, world_position
+        # if(parent != -1):
+        parent_rotation, parent_position = get_world_transform(parent)
+        world_rotation = parent_rotation @ local_rotation
+        world_position = parent_position + parent_rotation @ local_position
+        joint_completed[joint] = True
+        return world_rotation, world_position
+        # else:
+        #     world_position = local_position + root_offset
+        #     joint_completed[joint] = True
+        #     return local_rotation, world_position
         
     
     """Student part-1 implementation.
