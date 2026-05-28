@@ -245,6 +245,35 @@ mandatory session.
 
 ---
 
+# FAQ
+
+[Open the FAQ](faq.html)
+
+- setup and Git questions we expect more than once
+- short answers collected in one student-facing page
+- updated as recurring questions come up
+
+???
+Use this as a low-friction support pointer before the technical material.
+Students should know there is one place to check before asking repeated setup
+or Git workflow questions.
+
+---
+
+# Current FAQ Items
+
+- `conda` can be used in place of `mamba`
+- use two Git remotes if you want to keep custom code in your own repository
+- pull course updates from the teaching repo; push your work to your repo
+- SMPL model download details are in the Part 2 notes
+- Windows SMPL loading issue: see FAQ and GitHub issue `#1`
+
+???
+Keep this brief. The FAQ page has the concrete commands, so the slide should
+only give the mental model and point students to the page.
+
+---
+
 # Why Skinning Changes The Problem
 
 - same FK poses from Part 1
@@ -487,6 +516,8 @@ public Part 3 tooling and brief will be introduced later.
 - save evidence immediately
 - compare failure cases, not just final results
 - ask for help with a specific screenshot or clip
+- use the [Git starter](https://rogerdudler.github.io/git-guide/) if Git
+  commands are new
 
 ???
 This is lecture framing rather than duplicated handout text. It gives students
@@ -515,6 +546,7 @@ wholesale AI-generated and must include declarations.
 - [Part 1](part1.html)
 - [Part 2](part2.html)
 - [Interim report](interim.html)
+- [FAQ](faq.html)
 - [References](references.html)
 - [Project repository](https://github.com/CambridgeCVCourses/IIA-Project-GF5)
 

@@ -11,14 +11,15 @@ from pathlib import Path
 from urllib.parse import urldefrag
 
 
-FORBIDDEN_PATHS = (
+RELEASE_PROFILES = ("parts12", "all")
+
+COMMON_FORBIDDEN_PATHS = (
     ".viewer_imports",
     "4DDress_samples",
     "UP2You",
-    "assets/motions",
+    "assets/motion_sources",
     "assets/smpl",
     "docs/__pycache__",
-    "docs/part3.md",
     "docs/part3_notes.md",
     "docs/staff_runbook.md",
     "docs/staff_release_workflow.md",
@@ -32,8 +33,34 @@ FORBIDDEN_PATHS = (
     "viewer/CONVENTIONS.md",
     "viewer/COORDINATES_AND_ENV.md",
     "viewer/reference_impl",
-    "viewer/scene_editor.py",
 )
+
+PROFILE_FORBIDDEN_PATHS = {
+    "parts12": (
+        "assets/motions",
+        "docs/part3.md",
+        "docs/part4.md",
+        "viewer/scene_core.py",
+        "viewer/scene_editor.py",
+        "viewer/scene_editor_web",
+        "viewer/scene_render.py",
+        "viewer/scene_web_server.py",
+    ),
+    "all": (
+        "docs/part3_placeholder.md",
+    ),
+}
+
+PROFILE_REQUIRED_PATHS = {
+    "parts12": (
+        "docs/part3_placeholder.md",
+    ),
+    "all": (
+        "docs/part3.md",
+        "assets/motions/part3_building_blocks",
+        "viewer/scene_web_server.py",
+    ),
+}
 
 FORBIDDEN_GLOBS = (
     "**/.DS_Store",
@@ -87,8 +114,12 @@ def normalize(path: Path) -> str:
     return path.as_posix().strip("/")
 
 
-def is_forbidden_path(relative: str) -> str | None:
-    for forbidden in FORBIDDEN_PATHS:
+def forbidden_paths_for_profile(release_profile: str) -> tuple[str, ...]:
+    return COMMON_FORBIDDEN_PATHS + PROFILE_FORBIDDEN_PATHS[release_profile]
+
+
+def is_forbidden_path(relative: str, *, release_profile: str) -> str | None:
+    for forbidden in forbidden_paths_for_profile(release_profile):
         if relative == forbidden or relative.startswith(f"{forbidden}/"):
             return forbidden
     for pattern in FORBIDDEN_GLOBS:
@@ -101,19 +132,25 @@ def is_text_file(path: Path) -> bool:
     return path.suffix.lower() in TEXT_SUFFIXES
 
 
-def audit(root: Path, *, max_file_mb: int) -> list[str]:
+def audit(root: Path, *, max_file_mb: int, release_profile: str) -> list[str]:
     problems: list[str] = []
     max_bytes = max_file_mb * 1024 * 1024
     root = root.resolve()
 
+    if release_profile not in RELEASE_PROFILES:
+        return [f"unknown release profile: {release_profile}"]
     if not root.exists():
         return [f"release root does not exist: {root}"]
+
+    for required in PROFILE_REQUIRED_PATHS[release_profile]:
+        if not (root / required).exists():
+            problems.append(f"missing required {release_profile!r} release path: {required}")
 
     for path in sorted(root.rglob("*")):
         if ".git" in path.relative_to(root).parts:
             continue
         relative = normalize(path.relative_to(root))
-        forbidden = is_forbidden_path(relative)
+        forbidden = is_forbidden_path(relative, release_profile=release_profile)
         if forbidden:
             problems.append(f"forbidden path matched {forbidden!r}: {relative}")
             continue
@@ -153,11 +190,15 @@ def check_links(root: Path, path: Path, text: str) -> list[str]:
         target, _fragment = urldefrag(link)
         if not target:
             continue
-        candidate = (path.parent / target).resolve()
+        relative = normalize(path.relative_to(root))
+        if target.startswith("/") and relative == "viewer/scene_editor_web/index.html":
+            candidate = (path.parent / target.lstrip("/")).resolve()
+        else:
+            candidate = (path.parent / target).resolve()
         if root not in candidate.parents and candidate != root:
-            problems.append(f"link escapes release tree in {normalize(path.relative_to(root))}: {link}")
+            problems.append(f"link escapes release tree in {relative}: {link}")
         elif not candidate.exists():
-            problems.append(f"missing link target in {normalize(path.relative_to(root))}: {link}")
+            problems.append(f"missing link target in {relative}: {link}")
     return problems
 
 
@@ -170,6 +211,12 @@ def main() -> int:
         help="Student release tree to audit.",
     )
     parser.add_argument(
+        "--release-profile",
+        choices=RELEASE_PROFILES,
+        default="parts12",
+        help="Student release profile to audit: parts12 blocks unreleased Part 3 material; all expects released Part 3 material.",
+    )
+    parser.add_argument(
         "--max-file-mb",
         type=int,
         default=20,
@@ -177,7 +224,11 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    problems = audit(Path(args.root), max_file_mb=args.max_file_mb)
+    problems = audit(
+        Path(args.root),
+        max_file_mb=args.max_file_mb,
+        release_profile=args.release_profile,
+    )
     if problems:
         print("Student release audit failed:", file=sys.stderr)
         for problem in problems:

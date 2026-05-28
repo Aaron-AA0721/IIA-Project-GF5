@@ -88,16 +88,23 @@ The viewer may create local working folders while you experiment:
 
 These folders are local outputs, not files you need to submit as source code.
 
+## Git Starter
+
+If Git commands are new to you, use the
+[Git starter guide](https://rogerdudler.github.io/git-guide/) as a quick
+reference for cloning, committing, pulling, and pushing.
+
 ## SMPL Model Files
 
-SMPL model files are not included in the repository. If you have access to
-them, place them under:
+SMPL is needed for Part 2. The detailed download instructions are in
+[Part 2](part2.md#smpl-model-setup). The expected local folder layout is:
 
 ```text
+assets/smpl/
 assets/smpl/models/
 ```
 
-or start the viewer with an explicit model path:
+You can also start the viewer with an explicit model path:
 
 ```bash
 python viewer/asset_viewer.py --smpl-model /path/to/smpl/model.pkl
@@ -111,6 +118,8 @@ most common cause of `viewer/asset_viewer.py` not being found.
 
 If video export fails, check that `ffmpeg` is installed and available on
 `PATH`.
+
+For more setup notes, see the [FAQ](faq.md).
 
 ## Next Step
 

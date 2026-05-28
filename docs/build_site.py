@@ -32,23 +32,64 @@ class Page:
     eyebrow: str
 
 
-PAGES = [
+RELEASE_PROFILES = ("parts12", "all")
+ACTIVE_RELEASE_PROFILE = "parts12"
+
+PARTS12_PAGES = [
     Page("project_overview.md", "index.html", "Overview", "Parts 1 and 2 release"),
     Page("setup.md", "setup.html", "Setup", "Before coding"),
     Page("part1.md", "part1.html", "Part 1", "Part 1"),
     Page("part2.md", "part2.html", "Part 2", "Part 2"),
     Page("interim.md", "interim.html", "Interim", "Checkpoint"),
     Page("part3_placeholder.md", "part3.html", "Part 3", "Coming later"),
+    Page("faq.md", "faq.html", "FAQ", "Common questions"),
     Page("references.md", "references.html", "References", "Further reading"),
 ]
 
-SOURCE_TO_OUTPUT = {page.source: page.output for page in PAGES}
-SOURCE_TO_OUTPUT.update(
-    {
-        "../slides/intro.md": "intro.html",
-        "slides/intro.md": "intro.html",
-    }
-)
+ALL_PAGES = [
+    Page("project_overview.md", "index.html", "Overview", "Full student release"),
+    Page("setup.md", "setup.html", "Setup", "Before coding"),
+    Page("part1.md", "part1.html", "Part 1", "Part 1"),
+    Page("part2.md", "part2.html", "Part 2", "Part 2"),
+    Page("interim.md", "interim.html", "Interim", "Checkpoint"),
+    Page("part3.md", "part3.html", "Part 3", "Group project"),
+    Page("faq.md", "faq.html", "FAQ", "Common questions"),
+    Page("references.md", "references.html", "References", "Further reading"),
+]
+
+
+def build_source_to_output(pages: list[Page]) -> dict[str, str]:
+    mapping = {page.source: page.output for page in pages}
+    mapping.update(
+        {
+            "../slides/intro.md": "intro.html",
+            "slides/intro.md": "intro.html",
+            "part3.md": "part3.html",
+            "part3_placeholder.md": "part3.html",
+        }
+    )
+    return mapping
+
+
+def pages_for_release_profile(profile: str) -> list[Page]:
+    if profile == "parts12":
+        return PARTS12_PAGES
+    if profile == "all":
+        return ALL_PAGES
+    raise ValueError(f"Unknown release profile: {profile}")
+
+
+PAGES = pages_for_release_profile(ACTIVE_RELEASE_PROFILE)
+SOURCE_TO_OUTPUT = build_source_to_output(PAGES)
+
+
+def set_release_profile(profile: str) -> None:
+    global ACTIVE_RELEASE_PROFILE, PAGES, SOURCE_TO_OUTPUT
+    if profile not in RELEASE_PROFILES:
+        raise ValueError(f"Unknown release profile: {profile}")
+    ACTIVE_RELEASE_PROFILE = profile
+    PAGES = pages_for_release_profile(profile)
+    SOURCE_TO_OUTPUT = build_source_to_output(PAGES)
 
 
 @dataclass(frozen=True)
@@ -618,7 +659,11 @@ def render_nav(current: Page | None, *, slides_active: bool = False) -> str:
 
 
 def render_release_summary() -> str:
-    return """      <section class="release-strip" aria-label="Release summary">
+    if ACTIVE_RELEASE_PROFILE == "all":
+        part3_copy = "Group character animation, motion planning, and final video."
+    else:
+        part3_copy = "Public preview kept ready for the later brief."
+    return f"""      <section class="release-strip" aria-label="Release summary">
         <div class="metric">
           <strong>Part 1</strong>
           <span>Forward kinematics and a saved custom motion.</span>
@@ -633,7 +678,7 @@ def render_release_summary() -> str:
         </div>
         <div class="metric">
           <strong>Part 3</strong>
-          <span>Public placeholder kept ready for the later brief.</span>
+          <span>{part3_copy}</span>
         </div>
       </section>
 """
@@ -721,6 +766,7 @@ def render_page(
     html_title = SITE_TITLE if title == SITE_TITLE else f"{title} | {SITE_TITLE}"
     release_summary = render_release_summary() if page.output == "index.html" else ""
     toc = render_toc(doc)
+    article_class = "doc-content faq-content" if page.output == "faq.html" else "doc-content"
     if source_base_url:
         source_href = f"{source_base_url.rstrip('/')}/{page.source}"
     elif source_relative_base and source_relative_base != ".":
@@ -755,7 +801,7 @@ def render_page(
     <main id="main" class="page doc-page">
 {render_hero(page, doc)}{release_summary}
       <div class="doc-shell">
-{toc}        <article class="doc-content">
+{toc}        <article class="{article_class}">
 {indent(doc.body, 10)}
         </article>
       </div>
@@ -793,7 +839,13 @@ def indent(text: str, spaces: int) -> str:
     return "\n".join(lines)
 
 
-def build_site(output: Path, *, source_base_url: str | None = None) -> None:
+def build_site(
+    output: Path,
+    *,
+    source_base_url: str | None = None,
+    release_profile: str = "parts12",
+) -> None:
+    set_release_profile(release_profile)
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     assets_output = output / "assets"
@@ -831,9 +883,19 @@ def main() -> None:
         default=None,
         help="Optional URL prefix for Markdown source links in generated footers.",
     )
+    parser.add_argument(
+        "--release-profile",
+        choices=RELEASE_PROFILES,
+        default="parts12",
+        help="Student release profile to render: parts12 keeps the Part 3 preview; all renders released Part 3 pages.",
+    )
     args = parser.parse_args()
 
-    build_site(args.output.resolve(), source_base_url=args.source_base_url)
+    build_site(
+        args.output.resolve(),
+        source_base_url=args.source_base_url,
+        release_profile=args.release_profile,
+    )
 
 
 if __name__ == "__main__":
