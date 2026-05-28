@@ -260,6 +260,10 @@ a:focus {
   border-top: 0;
 }
 
+.faq-content h2 {
+  font-size: clamp(1.25rem, 2vw, 1.55rem);
+}
+
 .doc-content li + li {
   margin-top: 0.22rem;
 }
