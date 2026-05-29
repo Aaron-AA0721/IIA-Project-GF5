@@ -49,7 +49,7 @@ PAGES = [
     Page("setup.md", "setup.html", "Setup", "Before coding"),
     Page("part1.md", "part1.html", "Part 1", "Part 1"),
     Page("part2.md", "part2.html", "Part 2", "Part 2"),
-    Page("interim.md", "interim.html", "Interim", "Checkpoint"),
+    Page("interim.md", "interim.html", "Interim Report", "Checkpoint"),
     Page("part3.md", "part3.html", "Part 3", "Group project"),
     Page("scene_editor.md", "scene_editor.html", "Scene Editor", "Part 3 tool"),
     Page("showcase.md", "showcase.html", "Showcase", "Final session"),
