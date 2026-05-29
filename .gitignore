@@ -21,9 +21,9 @@ exports/
 .viewer_imports/
 
 # User-created Part 3 libraries
-libraries/avatars/*
-libraries/motions/custom/
-libraries/poses/
+# libraries/avatars/*
+# libraries/motions/custom/
+# libraries/poses/
 
 
 # Local SMPL model downloads
