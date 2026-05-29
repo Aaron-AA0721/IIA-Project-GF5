@@ -121,7 +121,7 @@ to the Part 3 composition tool.
 | --- | --- | --- | --- |
 | Interim report | Friday 29 May 2026 (2pm) | 20 | Individual |
 | Interim animation results | Friday 29 May 2026 (2pm) | 5 | Individual |
-| Part 3 showcase | Tuesday 9 June 2026 (11-1, LT6) | 10 | Group |
+| Final presentation | Tuesday 9 June 2026 (11-1, LT6) | 10 | Group |
 | Final report | Friday 12 June 2026 (4pm) | 30 | 50% individual, 50% group |
 | Final animation results | Friday 12 June 2026 (4pm) | 15 | Group |
 
