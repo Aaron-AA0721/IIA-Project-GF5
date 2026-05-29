@@ -1,0 +1,72 @@
+{
+  "format": "gf5_motion_scene",
+  "version": 3,
+  "duration": 12.0,
+  "background": {
+    "color": "#f4f1ea",
+    "image_path": "",
+    "show_grid": true,
+    "show_floor": true
+  },
+  "camera": {
+    "preset": "slow_orbit",
+    "target": "__origin__",
+    "height": 1.45
+  },
+  "export": {
+    "fps": 24,
+    "width": 960,
+    "height": 540
+  },
+  "characters": [
+    {
+      "id": "character_2",
+      "label": "Avatar 2",
+      "color": "#2f9b72",
+      "proxy_asset": "SMPL-24 Proxy",
+      "avatar_asset": "",
+      "track": [
+        {
+          "clip": "Custom: HY-Motion: Two person boxing",
+          "start": 0.0,
+          "duration": 4.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        }
+      ],
+      "root_keys": [
+        {
+          "id": "k0",
+          "time": 0.0,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "facing_degrees": 0.0
+        },
+        {
+          "id": "k1",
+          "time": 12.0,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "facing_degrees": 0.0
+        }
+      ],
+      "root_segments": [
+        {
+          "from": "k0",
+          "to": "k1",
+          "mode": "linear",
+          "facing": "manual"
+        }
+      ]
+    }
+  ]
+}
