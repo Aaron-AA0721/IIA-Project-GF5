@@ -924,7 +924,8 @@ class OffscreenAvatarRenderer:
     def __init__(self, width: int, height: int) -> None:
         if Image is None:
             raise RuntimeError("Pillow is required for final avatar rendering.") from PIL_IMPORT_ERROR
-        os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
+        if os.name != "nt":
+            os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
         mesa_cache_dir = Path(os.environ.get("MESA_SHADER_CACHE_DIR", str(Path("/tmp") / "gf5_mesa_shader_cache")))
         try:
             mesa_cache_dir.mkdir(parents=True, exist_ok=True)

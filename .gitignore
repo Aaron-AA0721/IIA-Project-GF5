@@ -30,6 +30,7 @@ libraries/scenes/
 smpl/
 smplify_public/
 assets/smpl/
+Report1/
 
 # Staff/reference implementations must not be committed to the student repo
 viewer/reference_impl/
