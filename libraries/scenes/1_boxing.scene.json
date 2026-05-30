@@ -9,7 +9,7 @@
     "show_floor": true
   },
   "camera": {
-    "preset": "slow_orbit",
+    "preset": "wide_static",
     "target": "__origin__",
     "height": 1.45
   },
@@ -27,9 +27,9 @@
       "avatar_asset": "",
       "track": [
         {
-          "clip": "Custom: HY-Motion: Two person boxing",
+          "clip": "Custom: HY-Motion: Two person boxing_2(modified)",
           "start": 0.0,
-          "duration": 4.966667,
+          "duration": 2.966667,
           "trim_start": 0.0,
           "trim_end": null,
           "root_mode": "path",
@@ -44,6 +44,71 @@
           "position": [
             0.0,
             0.0,
+            0.0
+          ],
+          "facing_degrees": 0.0
+        },
+        {
+          "id": "k2",
+          "time": 2.966667,
+          "position": [
+            0.0,
+            2.0,
+            0.0
+          ],
+          "facing_degrees": 0.0
+        },
+        {
+          "id": "k1",
+          "time": 12.0,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "facing_degrees": 0.0
+        }
+      ],
+      "root_segments": [
+        {
+          "from": "k0",
+          "to": "k2",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k2",
+          "to": "k1",
+          "mode": "linear",
+          "facing": "manual"
+        }
+      ]
+    },
+    {
+      "id": "character_3",
+      "label": "Avatar 3",
+      "color": "#d6a72f",
+      "proxy_asset": "SMPL-24 Proxy",
+      "avatar_asset": "",
+      "track": [
+        {
+          "clip": "Custom: HY-Motion: a person dodging during a boxing match to avoid being hit (3)",
+          "start": 0.0,
+          "duration": 2.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        }
+      ],
+      "root_keys": [
+        {
+          "id": "k0",
+          "time": 0.0,
+          "position": [
+            0.75,
+            0.5,
             0.0
           ],
           "facing_degrees": 0.0

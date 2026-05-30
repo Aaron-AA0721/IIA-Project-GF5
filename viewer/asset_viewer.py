@@ -132,6 +132,7 @@ class ViewerState:
     suppress_joint_slider_callbacks: bool = False
     suppress_timeline_time_callbacks: bool = False
     suppress_timeline_end_callbacks: bool = False
+    suppress_timeline_part_callbacks: bool = False
     suppress_motion_preview_time_callbacks: bool = False
     suppress_root_slider_callbacks: bool = False
     suppress_use_lbs_callbacks: bool = False
@@ -139,10 +140,18 @@ class ViewerState:
     root_transform_handle: Any | None = None
     suppress_transform_callback: bool = False
     suppress_root_transform_callback: bool = False
+    working_sequence_range_start: float | None = None
+    working_sequence_range_end: float | None = None
     keyframes: list[dict[str, Any]] | None = None
     working_sequence_source_kind: str | None = None
     working_sequence_source_path: Path | None = None
     working_sequence_source_name: str | None = None
+    working_sequence_track_cache: dict[str, list[dict[str, Any]]] | None = None
+    track_lane_button_handles: list[Any] | None = None
+    track_timeline_needs_refresh: bool = True
+    last_track_timeline_render_time: float | None = None
+    working_sequence_play_start_time_sec: float | None = None
+    working_sequence_play_start_wall_time: float | None = None
     last_export_path: Path | None = None
     is_loading_asset: bool = False
     is_exporting_video: bool = False
@@ -1210,7 +1219,8 @@ def forward_kinematics(
 def clear_scene(state: ViewerState) -> None:
     if state.part_handles is not None:
         for handle in state.part_handles:
-            handle.remove()
+            if handle is not None:
+                handle.remove()
     if state.mesh_handle is not None:
         state.mesh_handle.remove()
     if state.skinning_weight_handle is not None:
@@ -1219,17 +1229,24 @@ def clear_scene(state: ViewerState) -> None:
         state.skeleton_handle.remove()
     if state.joint_marker_handles is not None:
         for handle in state.joint_marker_handles:
-            handle.remove()
+            if handle is not None:
+                handle.remove()
     if state.joint_label_handles is not None:
         for handle in state.joint_label_handles:
-            handle.remove()
+            if handle is not None:
+                handle.remove()
     if state.joint_frame_handles is not None:
         for handle in state.joint_frame_handles:
-            handle.remove()
+            if handle is not None:
+                handle.remove()
     if state.transform_control_handle is not None:
         state.transform_control_handle.remove()
     if state.root_transform_handle is not None:
         state.root_transform_handle.remove()
+    if state.track_lane_button_handles is not None:
+        for handle in state.track_lane_button_handles:
+            if handle is not None:
+                handle.remove()
     state.asset = None
     state.part_handles = None
     state.mesh_handle = None
@@ -1247,6 +1264,11 @@ def clear_scene(state: ViewerState) -> None:
     state.selected_joint_index = None
     state.transform_control_handle = None
     state.root_transform_handle = None
+    state.track_lane_button_handles = None
+    state.working_sequence_range_start = None
+    state.working_sequence_range_end = None
+    state.track_timeline_needs_refresh = True
+    state.last_track_timeline_render_time = None
     state.last_export_path = None
 
 
@@ -1725,7 +1747,8 @@ def main() -> None:
         )
         reset_root_button = server.gui.add_button("Reset Root Translation")
 
-    with server.gui.add_folder("Working Sequence"):
+    working_sequence_folder = server.gui.add_folder("Working Sequence")
+    with working_sequence_folder:
         timeline_time_slider = server.gui.add_slider(
             "Time",
             min=0.0,
@@ -1740,12 +1763,35 @@ def main() -> None:
             step=0.5,
             initial_value=DEFAULT_WORKING_SEQUENCE_DURATION,
         )
+        timeline_part_dropdown = server.gui.add_dropdown(
+            "Track",
+            ("Root",),
+            initial_value="Root",
+            disabled=True,
+        )
+        preview_working_sequence_checkbox = server.gui.add_checkbox("Play Working Sequence", initial_value=False)
+        previous_keyframe_button = server.gui.add_button("Jump to Previous Keyframe", disabled=True)
+        next_keyframe_button = server.gui.add_button("Jump to Next Keyframe", disabled=True)
         capture_pose_button = server.gui.add_button("Add Pose To Sequence")
         load_motion_sequence_button = server.gui.add_button("Load Motion Into Sequence")
         remove_keyframe_button = server.gui.add_button("Remove Keyframe", disabled=True)
+        range_delete_start_button = server.gui.add_button("Mark Range Start")
+        range_delete_end_button = server.gui.add_button("Mark Range End")
+        delete_range_button = server.gui.add_button("Delete Range", disabled=True)
+        delete_range_all_button = server.gui.add_button("Delete Range Across All Tracks", disabled=True)
+        clear_range_button = server.gui.add_button("Clear Range")
         clear_keyframes_button = server.gui.add_button("Clear Sequence")
         captured_count_text = server.gui.add_html(
             format_status_html("Sequence", "0 keyframes")
+        )
+        track_timeline_text = server.gui.add_html(
+            format_status_html("Track Timeline", "No keyframes yet")
+        )
+        track_lane_status_text = server.gui.add_html(
+            format_status_html("Track Lanes", "Select a track to edit")
+        )
+        range_delete_status_text = server.gui.add_html(
+            format_status_html("Range Delete", "Mark a start and end time on the active track")
         )
         timeline_status_text = server.gui.add_html(
             format_status_html("Working Sequence", "No sequence edits yet")
@@ -1831,6 +1877,11 @@ def main() -> None:
         selected_joint_dropdown.value = value
         state.suppress_joint_dropdown_callbacks = False
 
+    def set_timeline_part_dropdown_value(value: str) -> None:
+        state.suppress_timeline_part_callbacks = True
+        timeline_part_dropdown.value = value
+        state.suppress_timeline_part_callbacks = False
+
     def set_markdown_status(handle: Any, label: str, message: str) -> None:
         handle.content = format_status_html(label, message)
 
@@ -1842,7 +1893,286 @@ def main() -> None:
         state.suppress_root_slider_callbacks = False
 
     def sorted_keyframes() -> list[dict[str, Any]]:
-        return sorted(state.keyframes or [], key=lambda item: float(item["time_sec"]))
+        return state.keyframes or []
+
+    def selected_timeline_part_name() -> str | None:
+        if state.asset is None:
+            return None
+        if timeline_part_dropdown.value == "Root":
+            return "root"
+        if timeline_part_dropdown.value in state.asset.joint_lookup:
+            return timeline_part_dropdown.value
+        return None
+
+    def selected_timeline_part_label() -> str:
+        part_name = selected_timeline_part_name()
+        if part_name is None or part_name == "root":
+            return "Root"
+        return part_name
+
+    def update_timeline_part_options() -> None:
+        state.suppress_timeline_part_callbacks = True
+        if state.asset is None:
+            timeline_part_dropdown.options = ("Root",)
+            timeline_part_dropdown.value = "Root"
+            timeline_part_dropdown.disabled = True
+        else:
+            timeline_part_dropdown.options = ("Root",) + tuple(
+                joint.name for joint in state.asset.joints
+            )
+            if timeline_part_dropdown.value not in timeline_part_dropdown.options:
+                timeline_part_dropdown.value = "Root"
+            timeline_part_dropdown.disabled = False
+        state.suppress_timeline_part_callbacks = False
+
+    def keyframes_for_part(part_name: str | None) -> list[dict[str, Any]]:
+        if part_name is None:
+            return []
+        return [
+            keyframe
+            for keyframe in sorted_keyframes()
+            if str(keyframe.get("part_name", "root")) == part_name
+        ]
+
+    def selected_timeline_keyframes() -> list[dict[str, Any]]:
+        return keyframes_for_part(selected_timeline_part_name())
+
+    def select_timeline_part(part_name: str) -> None:
+        if part_name == "root":
+            clear_joint_selection()
+            set_selected_joint_dropdown_value("None")
+            set_timeline_part_dropdown_value("Root")
+            state.track_timeline_needs_refresh = True
+            return
+        if state.asset is None:
+            return
+        for joint_index, joint in enumerate(state.asset.joints):
+            if joint.name == part_name:
+                state.track_timeline_needs_refresh = True
+                select_joint(joint_index)
+                return
+
+    def set_working_sequence_playing(enabled: bool) -> None:
+        if preview_working_sequence_checkbox.value != enabled:
+            preview_working_sequence_checkbox.value = enabled
+        animate_checkbox.value = enabled
+        if enabled:
+            state.working_sequence_play_start_time_sec = current_timeline_time()
+            state.working_sequence_play_start_wall_time = time.time()
+        else:
+            state.working_sequence_play_start_time_sec = None
+            state.working_sequence_play_start_wall_time = None
+
+    def current_working_sequence_range() -> tuple[float, float] | None:
+        if state.working_sequence_range_start is None or state.working_sequence_range_end is None:
+            return None
+        start_time = float(state.working_sequence_range_start)
+        end_time = float(state.working_sequence_range_end)
+        if start_time <= end_time:
+            return start_time, end_time
+        return end_time, start_time
+
+    def set_working_sequence_range_mark(start_time: float | None = None, end_time: float | None = None) -> None:
+        if start_time is not None:
+            state.working_sequence_range_start = round(float(start_time), 6)
+        if end_time is not None:
+            state.working_sequence_range_end = round(float(end_time), 6)
+        if state.working_sequence_range_start is not None and state.working_sequence_range_end is not None:
+            start_time, end_time = current_working_sequence_range() or (0.0, 0.0)
+            set_markdown_status(
+                range_delete_status_text,
+                "Range Delete",
+                f"Selected {selected_timeline_part_label()} range {start_time:.2f}s to {end_time:.2f}s",
+            )
+            delete_range_button.disabled = False
+        else:
+            set_markdown_status(
+                range_delete_status_text,
+                "Range Delete",
+                "Mark a start and end time on the active track",
+            )
+            delete_range_button.disabled = True
+
+    def clear_working_sequence_range() -> None:
+        state.working_sequence_range_start = None
+        state.working_sequence_range_end = None
+        set_markdown_status(
+            range_delete_status_text,
+            "Range Delete",
+            "Mark a start and end time on the active track",
+        )
+        delete_range_button.disabled = True
+
+    def delete_keyframes_in_range(start_time: float, end_time: float, part_name: str | None) -> int:
+        if not state.keyframes:
+            return 0
+        low_time = min(float(start_time), float(end_time))
+        high_time = max(float(start_time), float(end_time))
+        removed_count = 0
+        kept_keyframes: list[dict[str, Any]] = []
+        for keyframe in state.keyframes:
+            keyframe_time = float(keyframe["time_sec"])
+            keyframe_part = str(keyframe.get("part_name", "root"))
+            in_range = low_time - 1e-6 <= keyframe_time <= high_time + 1e-6
+            same_track = part_name is None or keyframe_part == part_name
+            if in_range and same_track:
+                removed_count += 1
+            else:
+                kept_keyframes.append(keyframe)
+        if removed_count:
+            state.keyframes = kept_keyframes
+            invalidate_working_sequence_track_cache()
+        return removed_count
+
+    def delete_keyframes_in_range_all_tracks(start_time: float, end_time: float) -> int:
+        return delete_keyframes_in_range(start_time, end_time, None)
+
+    def rebuild_track_lane_buttons() -> None:
+        if state.track_lane_button_handles is not None:
+            for handle in state.track_lane_button_handles:
+                handle.remove()
+        state.track_lane_button_handles = None
+
+    def preview_working_sequence() -> None:
+        if state.asset is None:
+            return
+        if clip_dropdown.value != WORKING_SEQUENCE_LABEL:
+            clip_dropdown.value = WORKING_SEQUENCE_LABEL
+        animate_checkbox.value = False
+        preview_timeline_time(current_timeline_time())
+
+    def selected_timeline_keyframe_times() -> list[float]:
+        return [float(keyframe["time_sec"]) for keyframe in selected_timeline_keyframes()]
+
+    def next_keyframe_time_after(time_sec: float) -> float | None:
+        for keyframe_time in selected_timeline_keyframe_times():
+            if keyframe_time > time_sec + 1e-4:
+                return keyframe_time
+        return None
+
+    def previous_keyframe_time_before(time_sec: float) -> float | None:
+        previous_time: float | None = None
+        for keyframe_time in selected_timeline_keyframe_times():
+            if keyframe_time >= time_sec - 1e-4:
+                break
+            previous_time = keyframe_time
+        return previous_time
+
+    def jump_to_keyframe(target_time: float | None) -> None:
+        if target_time is None:
+            return
+        sync_timeline_time_controls(target_time)
+        update_timeline_controls()
+        preview_timeline_time(target_time)
+
+    def update_track_timeline_text(*, force_refresh: bool = False) -> None:
+        current_time = current_timeline_time()
+        if (
+            not force_refresh
+            and not state.track_timeline_needs_refresh
+            and state.last_track_timeline_render_time is not None
+            and abs(current_time - state.last_track_timeline_render_time) < 0.08
+        ):
+            return
+
+        state.last_track_timeline_render_time = current_time
+        state.track_timeline_needs_refresh = False
+
+        if not state.keyframes:
+            track_timeline_text.content = format_status_html("Track Timeline", "No keyframes yet")
+            return
+
+        tracks = working_sequence_track_cache()
+        selected_part = selected_timeline_part_name()
+        ordered_part_names: list[str] = ["root"] + (
+            [joint.name for joint in state.asset.joints] if state.asset is not None else []
+        )
+        duration = max(float(keyframe["time_sec"]) for keyframe in state.keyframes)
+        width = max(520, int(duration * 120) + 180)
+        row_height = 26
+        header_height = 26
+        label_width = 116
+        content_height = header_height + row_height * len(ordered_part_names) + 8
+
+        def track_label(part_name: str) -> str:
+            return "Root" if part_name == "root" else part_name
+
+        def track_color(part_name: str) -> str:
+            return "#1e88e5" if part_name == selected_part else "#64707a"
+
+        def keyframe_x(time_value: float) -> float:
+            if duration <= 1e-6:
+                return label_width + 24.0
+            return label_width + 24.0 + (time_value / duration) * (width - label_width - 48.0)
+
+        tick_marks = []
+        for tick_index in range(int(max(2, math.ceil(duration))) + 1):
+            tick_time = float(tick_index)
+            x = keyframe_x(min(tick_time, duration))
+            tick_marks.append(
+                f"<line x1='{x:.2f}' y1='0' x2='{x:.2f}' y2='{content_height - 4:.2f}' stroke='#d7dedb' stroke-width='1' />"
+                f"<text x='{x:.2f}' y='18' text-anchor='middle' fill='#6b7678' font-size='10'>{tick_time:.0f}s</text>"
+            )
+
+        rows = []
+        for row_index, part_name in enumerate(ordered_part_names):
+            y = header_height + row_index * row_height
+            part_keyframes = tracks.get(part_name, [])
+            row_fill = "#eef5ff" if part_name == selected_part else ("#fbfcfb" if row_index % 2 else "#ffffff")
+            rows.append(
+                f"<rect x='0' y='{y}' width='{width}' height='{row_height}' fill='{row_fill}' stroke='none' />"
+                f"<text x='12' y='{y + 17}' fill='{track_color(part_name)}' font-size='12' font-weight='600'>{html.escape(track_label(part_name))}</text>"
+                f"<line x1='{label_width}' y1='{y + row_height / 2:.2f}' x2='{width - 12}' y2='{y + row_height / 2:.2f}' stroke='#e2e8e5' stroke-width='1' />"
+            )
+            if not part_keyframes:
+                rows.append(
+                    f"<text x='{label_width + 24}' y='{y + 17}' fill='#96a29e' font-size='11'>No keys</text>"
+                )
+                continue
+            for keyframe in part_keyframes:
+                x = keyframe_x(float(keyframe["time_sec"]))
+                rows.append(
+                    f"<circle cx='{x:.2f}' cy='{y + row_height / 2:.2f}' r='5.5' fill='{track_color(part_name)}' stroke='#ffffff' stroke-width='1.5' />"
+                )
+
+        track_timeline_text.content = (
+            "<div style='overflow-x:auto; max-width:100%; padding-bottom:2px;'>"
+            f"<div style='font-weight:700; margin-bottom:6px;'>Track Timeline</div>"
+            f"<svg width='{width}' height='{content_height}' viewBox='0 0 {width} {content_height}' xmlns='http://www.w3.org/2000/svg' style='display:block;'>"
+            "<rect x='0' y='0' width='100%' height='100%' fill='#ffffff' rx='8' />"
+            f"{''.join(tick_marks)}"
+            f"{''.join(rows)}"
+            f"<line x1='{keyframe_x(current_time):.2f}' y1='0' x2='{keyframe_x(current_time):.2f}' y2='{content_height}' stroke='#b65c15' stroke-width='2' />"
+            "</svg></div>"
+        )
+
+    def invalidate_working_sequence_track_cache() -> None:
+        state.working_sequence_track_cache = None
+        state.track_timeline_needs_refresh = True
+
+    def working_sequence_track_cache() -> dict[str, list[dict[str, Any]]]:
+        if state.working_sequence_track_cache is None:
+            state.working_sequence_track_cache = motion_entries_by_part(state.keyframes or [])
+        return state.working_sequence_track_cache
+
+    def update_timeline_status_summary(*, force_refresh: bool = False) -> None:
+        total_keyframes = len(state.keyframes or [])
+        selected_keyframes = len(selected_timeline_keyframes())
+        selected_part = selected_timeline_part_label()
+        if selected_part == "Root" and selected_keyframes == total_keyframes:
+            message = f"{total_keyframes} keyframes"
+        else:
+            message = f"{selected_keyframes} on {selected_part} / {total_keyframes} total"
+        set_markdown_status(captured_count_text, "Sequence", message)
+        update_track_timeline_text(force_refresh=force_refresh)
+        if state.asset is None:
+            set_markdown_status(track_lane_status_text, "Track Lanes", "Select a track to edit")
+        else:
+            set_markdown_status(
+                track_lane_status_text,
+                "Track Lanes",
+                f"{len(state.asset.joints) + 1} lanes; active track: {selected_part}",
+            )
 
     def selected_keyframed_motion_payload() -> dict[str, Any] | None:
         source_kind, source_value = motion_options[clip_dropdown.value]
@@ -1875,7 +2205,7 @@ def main() -> None:
     def selected_motion_preview_marks() -> tuple[GuiSliderMark, ...] | None:
         source_kind, _source_value = motion_options[clip_dropdown.value]
         if source_kind == "working_sequence":
-            keyframes = sorted_keyframes()
+            keyframes = selected_timeline_keyframes()
             if not keyframes:
                 return None
             start_time = float(keyframes[0]["time_sec"])
@@ -1886,9 +2216,15 @@ def main() -> None:
         payload = selected_keyframed_motion_payload()
         if payload is None:
             return None
+        keyframes = payload.get("__motion_entries")
+        if keyframes is None:
+            keyframes = motion_entries_from_payload(payload)
+            payload["__motion_entries"] = keyframes
+        if not keyframes:
+            return None
         return tuple(
             GuiSliderMark(value=float(keyframe["time_sec"]), label=None)
-            for keyframe in sorted(payload["keyframes"], key=lambda item: float(item["time_sec"]))
+            for keyframe in keyframes
         )
 
     def selected_motion_is_animatable() -> bool:
@@ -1903,9 +2239,12 @@ def main() -> None:
     def find_keyframe_index_at_time(
         time_sec: float,
         *,
+        part_name: str | None = None,
         tolerance: float = 1e-4,
     ) -> int | None:
         for index, keyframe in enumerate(state.keyframes or []):
+            if part_name is not None and str(keyframe.get("part_name", "root")) != part_name:
+                continue
             if abs(float(keyframe["time_sec"]) - time_sec) <= tolerance:
                 return index
         return None
@@ -1955,9 +2294,14 @@ def main() -> None:
         )
         motion_preview_time_slider.disabled = not can_preview_motion
         animate_checkbox.disabled = not can_preview_motion
+        preview_working_sequence_checkbox.disabled = not can_preview_motion
         export_video_button.disabled = state.is_exporting_video or not can_preview_motion
         if not can_preview_motion and animate_checkbox.value:
             animate_checkbox.value = False
+        if not can_preview_motion and preview_working_sequence_checkbox.value:
+            preview_working_sequence_checkbox.value = False
+        if clip_dropdown.value != WORKING_SEQUENCE_LABEL and preview_working_sequence_checkbox.value:
+            preview_working_sequence_checkbox.value = False
 
     def selected_motion_export_duration() -> float:
         source_kind, _source_value = motion_options[clip_dropdown.value]
@@ -2021,7 +2365,14 @@ def main() -> None:
             if state.keyframes
             else 0.0
         )
-        if latest_keyframe_time > float(timeline_length_slider.value):
+        if clip_dropdown.value == WORKING_SEQUENCE_LABEL:
+            if state.keyframes:
+                desired_length = max(1.0, math.ceil(latest_keyframe_time * 2.0) / 2.0)
+            else:
+                desired_length = DEFAULT_WORKING_SEQUENCE_DURATION
+            if abs(float(timeline_length_slider.value) - desired_length) > 1e-6:
+                sync_timeline_length_control(desired_length)
+        elif latest_keyframe_time > float(timeline_length_slider.value):
             sync_timeline_length_control(math.ceil(latest_keyframe_time * 2.0) / 2.0)
 
         slider_max = float(timeline_length_slider.value)
@@ -2030,20 +2381,26 @@ def main() -> None:
         timeline_time_slider.step = 0.1
         keyframe_marks = tuple(
             GuiSliderMark(value=float(keyframe["time_sec"]), label=None)
-            for keyframe in sorted_keyframes()
+            for keyframe in selected_timeline_keyframes()
         )
         timeline_time_slider._marks = keyframe_marks if keyframe_marks else None
 
         current_time = max(0.0, min(float(timeline_time_slider.value), slider_max))
         sync_timeline_time_controls(current_time)
-        has_keyframe_at_time = find_keyframe_index_at_time(current_time) is not None
+        active_part = selected_timeline_part_name()
+        has_keyframe_at_time = find_keyframe_index_at_time(current_time, part_name=active_part) is not None
         capture_pose_button.label = (
-            "Update Pose In Sequence"
+            "Update Track Keyframe"
             if has_keyframe_at_time
-            else "Add Pose To Sequence"
+            else "Add Track Keyframe"
         )
+        part_times = selected_timeline_keyframe_times()
+        next_keyframe_button.disabled = not part_times
+        previous_keyframe_button.disabled = not part_times
         load_motion_sequence_button.disabled = selected_keyframed_motion_payload() is None
         remove_keyframe_button.disabled = not has_keyframe_at_time
+        delete_range_button.disabled = current_working_sequence_range() is None
+        delete_range_all_button.disabled = current_working_sequence_range() is None
         update_sequence_save_controls()
         update_video_duration_control()
         if motion_options[clip_dropdown.value][0] == "working_sequence":
@@ -2152,6 +2509,8 @@ def main() -> None:
     def clear_joint_selection() -> None:
         state.selected_joint_index = None
         set_selected_joint_dropdown_value("None")
+        set_timeline_part_dropdown_value("Root")
+        state.track_timeline_needs_refresh = True
         set_joint_sliders_enabled(False)
         reset_joint_sliders()
         if state.current_local_rotations is not None and state.current_root_offset is not None:
@@ -2172,6 +2531,8 @@ def main() -> None:
             return
         state.selected_joint_index = None
         set_selected_joint_dropdown_value("None")
+        set_timeline_part_dropdown_value("Root")
+        state.track_timeline_needs_refresh = True
         set_joint_sliders_enabled(False)
         reset_joint_sliders()
         identity_rotations = [np.eye(3, dtype=np.float32) for _ in state.asset.joints]
@@ -2195,14 +2556,14 @@ def main() -> None:
         )
         state.suppress_transform_callback = False
 
-    def update_keyframe_status() -> None:
-        count = len(state.keyframes or [])
-        set_markdown_status(captured_count_text, "Sequence", f"{count} keyframes")
+    def update_keyframe_status(*, force_refresh: bool = False) -> None:
+        update_timeline_status_summary(force_refresh=force_refresh)
 
-    def preview_timeline_time(time_sec: float) -> None:
+    def preview_timeline_time(time_sec: float, *, keep_playing: bool = False) -> None:
         if state.asset is None:
             return
-        animate_checkbox.value = False
+        if not keep_playing:
+            animate_checkbox.value = False
         sampled_pose = sample_captured_keyframe_pose(time_sec)
         if sampled_pose is None:
             reset_current_pose()
@@ -2426,21 +2787,229 @@ def main() -> None:
         refresh_saved_pose_options()
         return snapshot_path
 
+    def serialize_current_part_keyframe(time_sec: float) -> dict[str, Any] | None:
+        if (
+            state.asset is None
+            or state.current_local_rotations is None
+            or state.current_root_offset is None
+        ):
+            return None
+        part_name = selected_timeline_part_name()
+        if part_name is None:
+            return None
+        if part_name == "root":
+            return {
+                "time_sec": round(float(time_sec), 6),
+                "part_name": "root",
+                "root_offset": [round(float(v), 6) for v in state.current_root_offset],
+            }
+        joint_index = state.asset.joint_lookup.get(part_name)
+        if joint_index is None:
+            return None
+        return {
+            "time_sec": round(float(time_sec), 6),
+            "part_name": part_name,
+            "local_rotation_matrices": [
+                [round(float(value), 6) for value in row]
+                for row in state.current_local_rotations[joint_index]
+            ],
+        }
+
+    def motion_entries_by_part(entries: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+        tracks: dict[str, list[dict[str, Any]]] = {}
+        for entry in entries:
+            part_name = str(entry.get("part_name", "root"))
+            tracks.setdefault(part_name, []).append(entry)
+        for track_entries in tracks.values():
+            track_entries.sort(key=lambda item: float(item["time_sec"]))
+        return tracks
+
+    def sample_root_track(
+        entries: list[dict[str, Any]],
+        sample_time: float,
+        *,
+        loop_duration: float | None,
+    ) -> Vec3f:
+        ordered_entries = sorted(entries, key=lambda item: float(item["time_sec"]))
+        if not ordered_entries:
+            return np.zeros(3, dtype=np.float32)
+        if loop_duration is not None and loop_duration > 0.0:
+            sample_time = math.fmod(sample_time, loop_duration)
+            if sample_time < 0.0:
+                sample_time += loop_duration
+        if len(ordered_entries) == 1 or sample_time <= float(ordered_entries[0]["time_sec"]):
+            return np.asarray(ordered_entries[0]["root_offset"], dtype=np.float32)
+        if loop_duration is None and sample_time >= float(ordered_entries[-1]["time_sec"]):
+            return np.asarray(ordered_entries[-1]["root_offset"], dtype=np.float32)
+        for first, second in zip(ordered_entries[:-1], ordered_entries[1:]):
+            t0 = float(first["time_sec"])
+            t1 = float(second["time_sec"])
+            if t0 <= sample_time <= t1:
+                if abs(t1 - t0) < 1e-6:
+                    return np.asarray(second["root_offset"], dtype=np.float32)
+                alpha = (sample_time - t0) / (t1 - t0)
+                root0 = np.asarray(first["root_offset"], dtype=np.float32)
+                root1 = np.asarray(second["root_offset"], dtype=np.float32)
+                return ((1.0 - alpha) * root0 + alpha * root1).astype(np.float32)
+        return np.asarray(ordered_entries[-1]["root_offset"], dtype=np.float32)
+
+    def sample_rotation_track(
+        entries: list[dict[str, Any]],
+        sample_time: float,
+        *,
+        loop_duration: float | None,
+    ) -> Mat3f:
+        ordered_entries = sorted(entries, key=lambda item: float(item["time_sec"]))
+        if not ordered_entries:
+            return np.eye(3, dtype=np.float32)
+        if loop_duration is not None and loop_duration > 0.0:
+            sample_time = math.fmod(sample_time, loop_duration)
+            if sample_time < 0.0:
+                sample_time += loop_duration
+        if len(ordered_entries) == 1 or sample_time <= float(ordered_entries[0]["time_sec"]):
+            return np.asarray(ordered_entries[0]["local_rotation_matrices"], dtype=np.float32)
+        if loop_duration is None and sample_time >= float(ordered_entries[-1]["time_sec"]):
+            return np.asarray(ordered_entries[-1]["local_rotation_matrices"], dtype=np.float32)
+        for first, second in zip(ordered_entries[:-1], ordered_entries[1:]):
+            t0 = float(first["time_sec"])
+            t1 = float(second["time_sec"])
+            if t0 <= sample_time <= t1:
+                if abs(t1 - t0) < 1e-6:
+                    return np.asarray(second["local_rotation_matrices"], dtype=np.float32)
+                alpha = (sample_time - t0) / (t1 - t0)
+                rotation0 = np.asarray(first["local_rotation_matrices"], dtype=np.float32)
+                rotation1 = np.asarray(second["local_rotation_matrices"], dtype=np.float32)
+                return quaternion_to_matrix(
+                    quaternion_slerp(
+                        matrix_to_quaternion(rotation0),
+                        matrix_to_quaternion(rotation1),
+                        alpha,
+                    )
+                )
+        return np.asarray(ordered_entries[-1]["local_rotation_matrices"], dtype=np.float32)
+
+    def sample_motion_entries_as_pose_sample(
+        entries: list[dict[str, Any]],
+        sample_time: float,
+        *,
+        loop_duration: float | None,
+    ) -> PoseSample:
+        tracks = motion_entries_by_part(entries)
+        return sample_motion_tracks_as_pose_sample(tracks, sample_time, loop_duration=loop_duration)
+
+    def sample_motion_tracks_as_pose_sample(
+        tracks: dict[str, list[dict[str, Any]]],
+        sample_time: float,
+        *,
+        loop_duration: float | None,
+    ) -> PoseSample:
+        root_offset = sample_root_track(tracks.get("root", []), sample_time, loop_duration=loop_duration)
+        local_rotations = [
+            sample_rotation_track(tracks.get(joint_name, []), sample_time, loop_duration=loop_duration)
+            for joint_name in COURSE_BODY_24_PROFILE.joint_names
+        ]
+        return PoseSample(
+            profile_name=COURSE_BODY_24_PROFILE.name,
+            root_offset=np.asarray(root_offset, dtype=np.float32),
+            local_rotations=local_rotations,
+        )
+
+    def motion_entries_to_legacy_keyframes(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if not entries:
+            return []
+        ordered_entries = sorted(
+            entries,
+            key=lambda item: (float(item["time_sec"]), str(item.get("part_name", "root"))),
+        )
+        unique_times = sorted({float(entry["time_sec"]) for entry in ordered_entries})
+        legacy_keyframes: list[dict[str, Any]] = []
+        for time_sec in unique_times:
+            pose_sample = sample_motion_entries_as_pose_sample(
+                ordered_entries,
+                time_sec,
+                loop_duration=None,
+            )
+            legacy_keyframes.append({
+                "time_sec": round(float(time_sec), 6),
+                "root_offset": [round(float(v), 6) for v in pose_sample.root_offset],
+                "local_rotation_matrices": [
+                    [[round(float(value), 6) for value in row] for row in rotation]
+                    for rotation in pose_sample.local_rotations
+                ],
+            })
+        return legacy_keyframes
+
+    def motion_entries_from_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
+        tracks = payload.get("tracks")
+        entries: list[dict[str, Any]] = []
+        if isinstance(tracks, dict):
+            for part_name, track_keyframes in tracks.items():
+                if not isinstance(track_keyframes, list):
+                    continue
+                for keyframe in track_keyframes:
+                    if not isinstance(keyframe, dict) or "time_sec" not in keyframe:
+                        continue
+                    entry: dict[str, Any] = {
+                        "time_sec": float(keyframe["time_sec"]),
+                        "part_name": str(part_name),
+                    }
+                    if str(part_name) == "root" and "root_offset" in keyframe:
+                        entry["root_offset"] = keyframe["root_offset"]
+                    elif "local_rotation_matrices" in keyframe:
+                        entry["local_rotation_matrices"] = keyframe["local_rotation_matrices"]
+                    entries.append(entry)
+            return sorted(
+                entries,
+                key=lambda item: (float(item["time_sec"]), str(item.get("part_name", "root"))),
+            )
+
+        legacy_keyframes = payload.get("keyframes") or []
+        for keyframe in legacy_keyframes:
+            if not isinstance(keyframe, dict) or "time_sec" not in keyframe:
+                continue
+            time_sec = float(keyframe["time_sec"])
+            if "root_offset" in keyframe and "local_rotation_matrices" in keyframe:
+                entries.append(
+                    {
+                        "time_sec": time_sec,
+                        "part_name": "root",
+                        "root_offset": keyframe["root_offset"],
+                    }
+                )
+                for joint_name, rotation in zip(
+                    COURSE_BODY_24_PROFILE.joint_names,
+                    keyframe["local_rotation_matrices"],
+                ):
+                    entries.append(
+                        {
+                            "time_sec": time_sec,
+                            "part_name": joint_name,
+                            "local_rotation_matrices": rotation,
+                        }
+                    )
+        return sorted(
+            entries,
+            key=lambda item: (float(item["time_sec"]), str(item.get("part_name", "root"))),
+        )
+
     def build_motion_library_payload(
         motion_name: str,
         keyframes: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        duration_sec = float(keyframes[-1]["time_sec"]) if keyframes else 0.0
+        ordered_keyframes = sorted(keyframes, key=lambda item: (float(item["time_sec"]), str(item.get("part_name", "root"))))
+        duration_sec = max((float(keyframe["time_sec"]) for keyframe in ordered_keyframes), default=0.0)
+        tracks = motion_entries_by_part(ordered_keyframes)
         return {
             "format": "gf5_keyframed_motion",
-            "version": 1,
+            "version": 2,
             "name": motion_name,
             "profile_name": COURSE_BODY_24_PROFILE.name,
             "joint_order": list(COURSE_BODY_24_PROFILE.joint_names),
             "duration_sec": round(duration_sec, 6),
             "exported_at": datetime.now().isoformat(timespec="seconds"),
             "source_asset_name": None if state.asset is None else state.asset.label,
-            "keyframes": keyframes,
+            "tracks": tracks,
+            "keyframes": motion_entries_to_legacy_keyframes(ordered_keyframes),
         }
 
     def write_motion_library_payload(
@@ -2499,15 +3068,30 @@ def main() -> None:
     def upsert_keyframe(keyframe: dict[str, Any]) -> str:
         if state.keyframes is None:
             state.keyframes = []
+        invalidate_working_sequence_track_cache()
         target_time = float(keyframe["time_sec"])
+        target_part = str(keyframe.get("part_name", "root"))
         for index, existing in enumerate(state.keyframes):
-            if abs(float(existing["time_sec"]) - target_time) < 1e-6:
+            if abs(float(existing["time_sec"]) - target_time) < 1e-6 and str(existing.get("part_name", "root")) == target_part:
                 state.keyframes[index] = keyframe
-                state.keyframes.sort(key=lambda item: float(item["time_sec"]))
+                state.keyframes.sort(
+                    key=lambda item: (float(item["time_sec"]), str(item.get("part_name", "root")))
+                )
                 return "updated"
         state.keyframes.append(keyframe)
-        state.keyframes.sort(key=lambda item: float(item["time_sec"]))
+        state.keyframes.sort(
+            key=lambda item: (float(item["time_sec"]), str(item.get("part_name", "root")))
+        )
         return "added"
+
+    def remove_keyframe_at_time(time_sec: float, part_name: str | None) -> dict[str, Any] | None:
+        if not state.keyframes:
+            return None
+        keyframe_index = find_keyframe_index_at_time(time_sec, part_name=part_name)
+        if keyframe_index is None:
+            return None
+        invalidate_working_sequence_track_cache()
+        return state.keyframes.pop(keyframe_index)
 
     def load_saved_pose_payload(path: Path) -> dict[str, Any]:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -2535,8 +3119,12 @@ def main() -> None:
             raise ValueError(f"{path.name} does not use the course motion profile.")
         if tuple(payload.get("joint_order", ())) != COURSE_BODY_24_PROFILE.joint_names:
             raise ValueError(f"{path.name} has an unexpected joint order.")
-        if not payload.get("keyframes"):
+        if not payload.get("keyframes") and not payload.get("tracks"):
             raise ValueError(f"{path.name} does not contain any keyframes.")
+
+        normalized_entries = motion_entries_from_payload(payload)
+        payload["__motion_entries"] = normalized_entries
+        payload["__motion_tracks"] = motion_entries_by_part(normalized_entries)
 
         motion_payload_cache[path] = (mtime, payload)
         return payload
@@ -2611,15 +3199,25 @@ def main() -> None:
         )
 
     def sample_custom_motion_payload(payload: dict[str, Any], sample_time: float) -> PoseSample:
-        duration_sec = float(payload.get("duration_sec", payload["keyframes"][-1]["time_sec"]))
-        return sample_keyframes_as_pose_sample(
-            payload["keyframes"],
-            sample_time,
-            loop_duration=duration_sec if duration_sec > 0.0 else None,
+        entries = payload.get("__motion_entries")
+        if entries is None:
+            entries = motion_entries_from_payload(payload)
+            payload["__motion_entries"] = entries
+        tracks = payload.get("__motion_tracks")
+        if tracks is None:
+            tracks = motion_entries_by_part(entries)
+            payload["__motion_tracks"] = tracks
+        duration_sec = float(
+            payload.get(
+                "duration_sec",
+                max((float(entry["time_sec"]) for entry in entries), default=0.0),
+            )
         )
+        loop_duration = duration_sec if duration_sec > 0.0 else None
+        return sample_motion_tracks_as_pose_sample(tracks, sample_time, loop_duration=loop_duration)
 
     def sample_working_sequence_as_motion(sample_time: float) -> PoseSample:
-        ordered_keyframes = sorted_keyframes()
+        ordered_keyframes = state.keyframes or []
         if not ordered_keyframes:
             raise ValueError("Working Sequence has no keyframes.")
         start_time = float(ordered_keyframes[0]["time_sec"])
@@ -2630,8 +3228,8 @@ def main() -> None:
             source_time = start_time + local_time
         else:
             source_time = start_time
-        return sample_keyframes_as_pose_sample(
-            ordered_keyframes,
+        return sample_motion_tracks_as_pose_sample(
+            working_sequence_track_cache(),
             source_time,
             loop_duration=None,
         )
@@ -2648,14 +3246,14 @@ def main() -> None:
     def sample_captured_keyframe_pose(sample_time: float) -> tuple[list[Mat3f], Vec3f] | None:
         if state.asset is None or not state.keyframes:
             return None
-        ordered_keyframes = sorted_keyframes()
+        ordered_keyframes = state.keyframes or []
         sample_time = float(sample_time)
         start_time = float(ordered_keyframes[0]["time_sec"])
         end_time = float(ordered_keyframes[-1]["time_sec"])
         if sample_time < start_time - 1e-6 or sample_time > end_time + 1e-6:
             return None
-        pose_sample = sample_keyframes_as_pose_sample(
-            ordered_keyframes,
+        pose_sample = sample_motion_tracks_as_pose_sample(
+            working_sequence_track_cache(),
             sample_time,
             loop_duration=None,
         )
@@ -2731,6 +3329,7 @@ def main() -> None:
         if not show_joint_handles_checkbox.value:
             show_joint_handles_checkbox.value = True
         set_selected_joint_dropdown_value(state.asset.joints[joint_index].name)
+        set_timeline_part_dropdown_value(state.asset.joints[joint_index].name)
         set_joint_sliders_enabled(True)
         sync_joint_sliders_to_rotation(state.manual_local_rotations[joint_index])
         sync_drag_handle()
@@ -2778,7 +3377,10 @@ def main() -> None:
             else:
                 asset = load_asset(asset_path)
             render_asset(server, state, asset)
+            invalidate_working_sequence_track_cache()
             update_joint_dropdown_options()
+            update_timeline_part_options()
+            rebuild_track_lane_buttons()
             update_skinning_controls()
             set_root_sliders_enabled(True)
             clear_joint_selection()
@@ -2851,6 +3453,7 @@ def main() -> None:
             set_markdown_status(pose_status_text, "Pose Library", "No saved pose yet")
             set_markdown_status(motion_library_status_text, "Motion Library", "No custom motion yet")
             set_markdown_status(video_status_text, "Video Export", "No video export yet")
+            clear_working_sequence_range()
             update_keyframe_status()
             update_timeline_controls()
         finally:
@@ -2921,6 +3524,52 @@ def main() -> None:
             if joint.name == selected_joint_dropdown.value:
                 select_joint(joint_index)
                 return
+
+    @timeline_part_dropdown.on_update
+    def _(_: Any) -> None:
+        if (
+            state.is_loading_asset
+            or state.suppress_timeline_part_callbacks
+            or state.asset is None
+        ):
+            return
+        if timeline_part_dropdown.value == "Root":
+            clear_joint_selection()
+            update_timeline_controls()
+            return
+        for joint_index, joint in enumerate(state.asset.joints):
+            if joint.name == timeline_part_dropdown.value:
+                select_joint(joint_index)
+                update_timeline_controls()
+                return
+
+    @previous_keyframe_button.on_click
+    def _(_: Any) -> None:
+        if state.asset is None:
+            return
+        current_time = current_timeline_time()
+        target_time = previous_keyframe_time_before(current_time)
+        if target_time is None:
+            times = selected_timeline_keyframe_times()
+            if not times:
+                set_markdown_status(timeline_status_text, "Working Sequence", "No keyframes on the selected track")
+                return
+            target_time = times[-1]
+        jump_to_keyframe(target_time)
+
+    @next_keyframe_button.on_click
+    def _(_: Any) -> None:
+        if state.asset is None:
+            return
+        current_time = current_timeline_time()
+        target_time = next_keyframe_time_after(current_time)
+        if target_time is None:
+            times = selected_timeline_keyframe_times()
+            if not times:
+                set_markdown_status(timeline_status_text, "Working Sequence", "No keyframes on the selected track")
+                return
+            target_time = times[0]
+        jump_to_keyframe(target_time)
 
     @show_skeleton_checkbox.on_update
     def _(_: Any) -> None:
@@ -3026,6 +3675,8 @@ def main() -> None:
         if state.is_loading_asset or state.suppress_motion_preview_time_callbacks:
             return
         animate_checkbox.value = False
+        if preview_working_sequence_checkbox.value:
+            preview_working_sequence_checkbox.value = False
         sync_motion_preview_time_control(motion_preview_time_slider.value)
         preview_selected_motion(motion_preview_time_slider.value)
 
@@ -3051,13 +3702,94 @@ def main() -> None:
             state.manual_local_rotations = copy_rotations(state.current_local_rotations)
             state.manual_root_offset = state.current_root_offset.copy()
 
+    @preview_working_sequence_checkbox.on_update
+    def _(_: Any) -> None:
+        if state.is_loading_asset:
+            return
+        if preview_working_sequence_checkbox.value:
+            if clip_dropdown.value != WORKING_SEQUENCE_LABEL:
+                clip_dropdown.value = WORKING_SEQUENCE_LABEL
+            set_working_sequence_playing(True)
+            preview_timeline_time(current_timeline_time(), keep_playing=True)
+        else:
+            set_working_sequence_playing(False)
+
+    @range_delete_start_button.on_click
+    def _(_: Any) -> None:
+        set_working_sequence_range_mark(start_time=current_timeline_time())
+
+    @range_delete_end_button.on_click
+    def _(_: Any) -> None:
+        set_working_sequence_range_mark(end_time=current_timeline_time())
+
+    @clear_range_button.on_click
+    def _(_: Any) -> None:
+        clear_working_sequence_range()
+
+    @delete_range_button.on_click
+    def _(_: Any) -> None:
+        active_part = selected_timeline_part_name()
+        if active_part is None:
+            set_markdown_status(timeline_status_text, "Working Sequence", "Select a track first")
+            return
+        selection = current_working_sequence_range()
+        if selection is None:
+            set_markdown_status(range_delete_status_text, "Range Delete", "Mark both a start and end time first")
+            return
+        removed_count = delete_keyframes_in_range(selection[0], selection[1], active_part)
+        if removed_count <= 0:
+            set_markdown_status(
+                range_delete_status_text,
+                "Range Delete",
+                f"No {selected_timeline_part_label()} keyframes found in the selected range",
+            )
+            return
+        set_markdown_status(
+            range_delete_status_text,
+            "Range Delete",
+            f"Removed {removed_count} {selected_timeline_part_label()} keyframes from {selection[0]:.2f}s to {selection[1]:.2f}s",
+        )
+        update_keyframe_status(force_refresh=True)
+        update_timeline_controls()
+        preview_timeline_time(current_timeline_time())
+
+    @delete_range_all_button.on_click
+    def _(_: Any) -> None:
+        selection = current_working_sequence_range()
+        if selection is None:
+            set_markdown_status(range_delete_status_text, "Range Delete", "Mark both a start and end time first")
+            return
+        removed_count = delete_keyframes_in_range_all_tracks(selection[0], selection[1])
+        if removed_count <= 0:
+            set_markdown_status(
+                range_delete_status_text,
+                "Range Delete",
+                f"No keyframes found in the selected range",
+            )
+            return
+        set_markdown_status(
+            range_delete_status_text,
+            "Range Delete",
+            f"Removed {removed_count} keyframes across all tracks from {selection[0]:.2f}s to {selection[1]:.2f}s",
+        )
+        update_keyframe_status(force_refresh=True)
+        update_timeline_controls()
+        preview_timeline_time(current_timeline_time())
+
     @clip_dropdown.on_update
     def _(_: Any) -> None:
         if state.asset is None:
             return
         update_motion_preview_controls()
         sync_motion_preview_time_control(0.0)
-        preview_selected_motion(0.0)
+        if clip_dropdown.value == WORKING_SEQUENCE_LABEL:
+            if preview_working_sequence_checkbox.value:
+                set_working_sequence_playing(True)
+                preview_timeline_time(current_timeline_time(), keep_playing=True)
+            else:
+                preview_timeline_time(current_timeline_time())
+        else:
+            preview_selected_motion(0.0)
         update_timeline_controls()
         update_video_duration_control()
 
@@ -3117,24 +3849,25 @@ def main() -> None:
 
     @capture_pose_button.on_click
     def _(_: Any) -> None:
-        keyframe = serialize_current_pose(current_timeline_time())
+        keyframe = serialize_current_part_keyframe(current_timeline_time())
         if keyframe is None:
-            set_markdown_status(timeline_status_text, "Working Sequence", "No pose available to add to the sequence")
+            set_markdown_status(timeline_status_text, "Working Sequence", "No track pose available to add")
             return
+        pose_snapshot = serialize_current_pose(current_timeline_time())
         action = upsert_keyframe(keyframe)
-        autosave_path = autosave_recent_pose(keyframe)
+        autosave_path = None if pose_snapshot is None else autosave_recent_pose(pose_snapshot)
         if autosave_path is not None:
             set_markdown_status(
                 timeline_status_text,
                 "Working Sequence",
-                f"{action.title()} keyframe at {keyframe['time_sec']:.2f}s and cached pose {autosave_path.name}",
+                f"{action.title()} {selected_timeline_part_label()} keyframe at {keyframe['time_sec']:.2f}s and cached pose {autosave_path.name}",
             )
             state.last_export_path = autosave_path
         else:
             set_markdown_status(
                 timeline_status_text,
                 "Working Sequence",
-                f"{action.title()} keyframe at {keyframe['time_sec']:.2f}s",
+                f"{action.title()} {selected_timeline_part_label()} keyframe at {keyframe['time_sec']:.2f}s",
             )
         sync_timeline_time_controls(round(current_timeline_time() + 1.0, 2))
         update_keyframe_status()
@@ -3152,11 +3885,9 @@ def main() -> None:
                 "Selected motion is preview-only and has no stored keyframes",
             )
             return
-        keyframes = sorted(
-            copy.deepcopy(payload["keyframes"]),
-            key=lambda item: float(item["time_sec"]),
-        )
+        keyframes = motion_entries_from_payload(payload)
         state.keyframes = keyframes
+        invalidate_working_sequence_track_cache()
         source_path = Path(source_value).resolve() if source_kind in {"preset", "custom"} else None
         source_name = motion_display_name(source_label, payload)
         set_working_sequence_source(
@@ -3172,6 +3903,7 @@ def main() -> None:
             sync_timeline_length_control(duration)
         sync_timeline_time_controls(0.0)
         animate_checkbox.value = False
+        update_timeline_part_options()
         update_keyframe_status()
         update_timeline_controls()
         if clip_dropdown.value != WORKING_SEQUENCE_LABEL:
@@ -3179,11 +3911,11 @@ def main() -> None:
         else:
             update_motion_preview_controls()
             sync_motion_preview_time_control(0.0)
-            preview_selected_motion(0.0)
+            preview_timeline_time(0.0)
         set_markdown_status(
             timeline_status_text,
             "Working Sequence",
-            f"Loaded {len(keyframes)} keyframes from {source_label}",
+            f"Loaded {len(keyframes)} track keyframes from {source_label}",
         )
         if source_kind == "custom":
             set_markdown_status(motion_library_status_text, "Motion Library", f"Editing custom sequence {source_name}")
@@ -3197,12 +3929,13 @@ def main() -> None:
             update_timeline_controls()
             return
         current_time = current_timeline_time()
-        keyframe_index = find_keyframe_index_at_time(current_time)
+        active_part = selected_timeline_part_name()
+        keyframe_index = find_keyframe_index_at_time(current_time, part_name=active_part)
         if keyframe_index is None:
             set_markdown_status(
                 timeline_status_text,
                 "Working Sequence",
-                f"No keyframe found at {current_time:.2f}s",
+                f"No {selected_timeline_part_label()} keyframe found at {current_time:.2f}s",
             )
             update_timeline_controls()
             return
@@ -3210,7 +3943,7 @@ def main() -> None:
         set_markdown_status(
             timeline_status_text,
             "Working Sequence",
-            f"Removed keyframe at {float(removed_keyframe['time_sec']):.2f}s",
+            f"Removed {str(removed_keyframe.get('part_name', 'root')).replace('_', ' ')} keyframe at {float(removed_keyframe['time_sec']):.2f}s",
         )
         update_keyframe_status()
         update_timeline_controls()
@@ -3219,6 +3952,8 @@ def main() -> None:
     @clear_keyframes_button.on_click
     def _(_: Any) -> None:
         state.keyframes = []
+        invalidate_working_sequence_track_cache()
+        clear_working_sequence_range()
         sync_timeline_length_control(DEFAULT_WORKING_SEQUENCE_DURATION)
         sync_timeline_time_controls(0.0)
         set_markdown_status(timeline_status_text, "Working Sequence", "Cleared the current sequence")
@@ -3520,25 +4255,43 @@ def main() -> None:
     while True:
         if state.asset is not None and not state.is_exporting_video:
             if animate_checkbox.value:
-                duration = selected_motion_preview_duration()
-                preview_time = math.fmod(time.time(), max(0.001, duration))
-                sync_motion_preview_time_control(preview_time)
-                try:
-                    pose_sample = sample_selected_motion(preview_time)
-                except Exception as exc:
-                    animate_checkbox.value = False
-                    if motion_options[clip_dropdown.value][0] == "working_sequence":
-                        reset_current_pose()
-                        set_markdown_status(motion_library_status_text, "Motion Library", str(exc))
+                if clip_dropdown.value == WORKING_SEQUENCE_LABEL:
+                    ordered_keyframes = sorted_keyframes()
+                    if state.working_sequence_play_start_time_sec is None:
+                        state.working_sequence_play_start_time_sec = current_timeline_time()
+                    if state.working_sequence_play_start_wall_time is None:
+                        state.working_sequence_play_start_wall_time = time.time()
+                    if ordered_keyframes:
+                        start_time = float(ordered_keyframes[0]["time_sec"])
+                        end_time = float(ordered_keyframes[-1]["time_sec"])
+                        duration = max(0.001, end_time - start_time)
+                        elapsed = time.time() - state.working_sequence_play_start_wall_time
+                        preview_time = start_time + math.fmod(elapsed, duration)
                     else:
-                        set_markdown_status(motion_library_status_text, "Motion Library", f"Could not load motion: {exc}")
-                        traceback.print_exc()
+                        preview_time = current_timeline_time()
+                    sync_timeline_time_controls(preview_time)
+                    update_timeline_controls()
+                    preview_timeline_time(preview_time, keep_playing=True)
                 else:
-                    local_rotations = pose_sample_to_asset_local_rotations(state.asset, pose_sample)
-                    root_offset = pose_sample.root_offset
-                    state.manual_local_rotations = copy_rotations(local_rotations)
-                    state.manual_root_offset = root_offset.copy()
-                    show_pose(local_rotations, root_offset)
+                    duration = selected_motion_preview_duration()
+                    preview_time = math.fmod(time.time(), max(0.001, duration))
+                    sync_motion_preview_time_control(preview_time)
+                    try:
+                        pose_sample = sample_selected_motion(preview_time)
+                    except Exception as exc:
+                        animate_checkbox.value = False
+                        if motion_options[clip_dropdown.value][0] == "working_sequence":
+                            reset_current_pose()
+                            set_markdown_status(motion_library_status_text, "Motion Library", str(exc))
+                        else:
+                            set_markdown_status(motion_library_status_text, "Motion Library", f"Could not load motion: {exc}")
+                            traceback.print_exc()
+                    else:
+                        local_rotations = pose_sample_to_asset_local_rotations(state.asset, pose_sample)
+                        root_offset = pose_sample.root_offset
+                        state.manual_local_rotations = copy_rotations(local_rotations)
+                        state.manual_root_offset = root_offset.copy()
+                        show_pose(local_rotations, root_offset)
         time.sleep(1.0 / 30.0)
 
 
