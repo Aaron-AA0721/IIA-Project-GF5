@@ -33,6 +33,12 @@ AVATAR_FINAL_OVERLAY_SATURATION = 1.0
 AVATAR_FINAL_OVERLAY_CONTRAST = 1.08
 AVATAR_FINAL_OVERLAY_BRIGHTNESS = 0.96
 AVATAR_CONTACT_SHADOW_ALPHA = 48
+SKYBOX_GRADIENTS: dict[str, tuple[tuple[int, int, int], tuple[int, int, int], tuple[int, int, int]]] = {
+    "studio_soft": ((224, 235, 247), (242, 238, 224), (244, 241, 234)),
+    "sunset_warm": ((253, 188, 146), (245, 213, 170), (232, 203, 173)),
+    "dusk_blue": ((88, 121, 171), (144, 163, 198), (204, 206, 214)),
+    "overcast": ((191, 199, 207), (214, 218, 220), (226, 223, 217)),
+}
 
 PALETTE = (
     "#2f7f7b",
@@ -96,6 +102,47 @@ def parse_hex_color(value: str, fallback: tuple[int, int, int]) -> tuple[int, in
         except ValueError:
             return fallback
     return fallback
+
+
+def lerp_color(first: tuple[int, int, int], second: tuple[int, int, int], alpha: float) -> tuple[int, int, int]:
+    alpha = clamp(alpha, 0.0, 1.0)
+    return (
+        int(round(first[0] * (1.0 - alpha) + second[0] * alpha)),
+        int(round(first[1] * (1.0 - alpha) + second[1] * alpha)),
+        int(round(first[2] * (1.0 - alpha) + second[2] * alpha)),
+    )
+
+
+def shade_color(color: tuple[int, int, int], factor: float) -> tuple[int, int, int]:
+    return (
+        int(clamp(color[0] * factor, 0.0, 255.0)),
+        int(clamp(color[1] * factor, 0.0, 255.0)),
+        int(clamp(color[2] * factor, 0.0, 255.0)),
+    )
+
+
+def draw_skybox_gradient(image: Any, scene: dict[str, Any]) -> None:
+    if ImageDraw is None:
+        return
+    environment = scene.get("environment", {})
+    skybox = str(environment.get("skybox", "none"))
+    if skybox == "none":
+        return
+    colors = SKYBOX_GRADIENTS.get(skybox)
+    if colors is None:
+        return
+    top, mid, bottom = colors
+    width, height = image.size
+    draw = ImageDraw.Draw(image)
+    horizon = int(round(height * 0.62))
+    for y in range(height):
+        if y <= horizon:
+            alpha = y / max(1, horizon)
+            color = lerp_color(top, mid, alpha)
+        else:
+            alpha = (y - horizon) / max(1, height - horizon - 1)
+            color = lerp_color(mid, bottom, alpha)
+        draw.line((0, y, width, y), fill=color)
 
 
 def character_color(scene: dict[str, Any], character_id: str, index: int) -> tuple[int, int, int]:
@@ -291,6 +338,8 @@ def camera_pose(scene: dict[str, Any], scene_time: float) -> tuple[Vec3, Vec3]:
     preset = str(camera.get("preset", "slow_orbit"))
     look_at = (center[0], center[1], max(0.6, height * 0.72))
     target_look_at = camera_target_look_at(scene, camera, scene_time, height)
+    orbit_radius = optional_positive_float(camera.get("orbit_radius"))
+    static_position = optional_vec3(camera.get("static_position"))
     if preset == "front_stage":
         position = vec_add(look_at, (0.0, radius, height * 0.85))
     elif preset == "slow_orbit":
@@ -298,7 +347,8 @@ def camera_pose(scene: dict[str, Any], scene_time: float) -> tuple[Vec3, Vec3]:
             look_at = target_look_at
         duration = max(0.001, float(scene.get("duration", 1.0)))
         angle = 2.0 * math.pi * (scene_time / duration)
-        position = vec_add(look_at, (math.sin(angle) * radius, math.cos(angle) * radius, height * 0.9))
+        effective_radius = orbit_radius if orbit_radius is not None else radius
+        position = vec_add(look_at, (math.sin(angle) * effective_radius, math.cos(angle) * effective_radius, height * 0.9))
     elif preset == "follow_character":
         if target_look_at is not None:
             look_at = target_look_at
@@ -313,8 +363,32 @@ def camera_pose(scene: dict[str, Any], scene_time: float) -> tuple[Vec3, Vec3]:
         position = (center[0], center[1] + 0.001, radius * 1.75)
         look_at = (center[0], center[1], 0.0)
     else:
-        position = vec_add(look_at, (0.45 * radius, 1.15 * radius, height * 0.95))
+        if static_position is not None:
+            position = static_position
+        else:
+            position = vec_add(look_at, (0.45 * radius, 1.15 * radius, height * 0.95))
     return position, look_at
+
+
+def optional_positive_float(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return None
+    if result != result or result in (float("inf"), float("-inf")) or result <= 0.0:
+        return None
+    return result
+
+
+def optional_vec3(value: Any) -> Vec3 | None:
+    if not isinstance(value, (list, tuple)) or len(value) < 3:
+        return None
+    try:
+        return (float(value[0]), float(value[1]), float(value[2]))
+    except (TypeError, ValueError):
+        return None
 
 
 def camera_target_look_at(scene: dict[str, Any], camera: dict[str, Any], scene_time: float, height: float) -> Vec3 | None:
@@ -383,6 +457,231 @@ def collect_projected_triangles(
             continue
         depth_key = sum(point[2] for point in points) / 3.0
         triangles.append((depth_key, coords, color))
+
+
+def draw_floor_grid(
+    draw: Any,
+    scene: dict[str, Any],
+    camera_position: Vec3,
+    look_at: Vec3,
+    width: int,
+    height: int,
+    *,
+    top_down: bool,
+) -> None:
+    background = scene.get("background", {})
+    center, radius = scene_center_and_radius(scene)
+    if bool(background.get("show_floor", True)):
+        extent = radius + 1.5
+        corners = [
+            (center[0] - extent, center[1] - extent, 0.0),
+            (center[0] + extent, center[1] - extent, 0.0),
+            (center[0] + extent, center[1] + extent, 0.0),
+            (center[0] - extent, center[1] + extent, 0.0),
+        ]
+        projected = [project_point(point, camera_position, look_at, width, height, top_down=top_down) for point in corners]
+        if all(projected):
+            assert projected[0] is not None and projected[1] is not None and projected[2] is not None and projected[3] is not None
+            draw.polygon([(point[0], point[1]) for point in projected], fill=(120, 123, 118, 24))
+    if not bool(background.get("show_grid", True)):
+        return
+    grid_extent = math.ceil(radius + 1.0)
+    for index in range(-grid_extent, grid_extent + 1):
+        for a, b in (
+            ((index, -grid_extent, 0.0), (index, grid_extent, 0.0)),
+            ((-grid_extent, index, 0.0), (grid_extent, index, 0.0)),
+        ):
+            pa = project_point((a[0] + center[0], a[1] + center[1], a[2]), camera_position, look_at, width, height, top_down=top_down)
+            pb = project_point((b[0] + center[0], b[1] + center[1], b[2]), camera_position, look_at, width, height, top_down=top_down)
+            if pa and pb:
+                draw.line((pa[0], pa[1], pb[0], pb[1]), fill=(36, 43, 45, 38), width=1)
+
+
+def normalized_environment_objects(scene: dict[str, Any]) -> list[dict[str, Any]]:
+    environment = scene.get("environment", {})
+    raw_items = environment.get("objects", []) if isinstance(environment, dict) else []
+    items = raw_items if isinstance(raw_items, list) else []
+    objects: list[dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        object_type = str(item.get("type", "")).strip().lower()
+        if object_type not in {"box", "sphere", "capsule"}:
+            continue
+        raw_position = item.get("position", [0.0, 0.0, 0.0])
+        raw_size = item.get("size", [0.8, 0.8, 0.8])
+        if not isinstance(raw_position, (list, tuple)) or not isinstance(raw_size, (list, tuple)):
+            continue
+        position = tuple(float(raw_position[index]) if index < len(raw_position) else 0.0 for index in range(3))
+        size = tuple(max(0.05, float(raw_size[index]) if index < len(raw_size) else 0.8) for index in range(3))
+        color = parse_hex_color(str(item.get("color", "#c8c0af")), (200, 192, 175))
+        rotation = float(item.get("rotation_degrees", 0.0))
+        objects.append(
+            {
+                "type": object_type,
+                "position": position,
+                "size": size,
+                "rotation_degrees": rotation,
+                "color": color,
+            }
+        )
+    return objects
+
+
+def draw_environment_objects(
+    draw: Any,
+    scene: dict[str, Any],
+    camera_position: Vec3,
+    look_at: Vec3,
+    width: int,
+    height: int,
+    *,
+    top_down: bool,
+) -> None:
+    objects = normalized_environment_objects(scene)
+    if not objects:
+        return
+    draw_items: list[tuple[float, dict[str, Any]]] = []
+    for obj in objects:
+        center = project_point(obj["position"], camera_position, look_at, width, height, top_down=top_down)
+        if center is None:
+            continue
+        draw_items.append((center[2], obj))
+    for _, obj in sorted(draw_items, key=lambda item: item[0]):
+        if obj["type"] == "box":
+            draw_environment_box(draw, obj, camera_position, look_at, width, height, top_down=top_down)
+        elif obj["type"] == "sphere":
+            draw_environment_sphere(draw, obj, camera_position, look_at, width, height, top_down=top_down)
+        else:
+            draw_environment_capsule(draw, obj, camera_position, look_at, width, height, top_down=top_down)
+
+
+def rotate_xy(x: float, y: float, angle_radians: float) -> tuple[float, float]:
+    c = math.cos(angle_radians)
+    s = math.sin(angle_radians)
+    return x * c - y * s, x * s + y * c
+
+
+def draw_environment_box(
+    draw: Any,
+    obj: dict[str, Any],
+    camera_position: Vec3,
+    look_at: Vec3,
+    width: int,
+    height: int,
+    *,
+    top_down: bool,
+) -> None:
+    center = obj["position"]
+    size = obj["size"]
+    color = obj["color"]
+    angle = math.radians(float(obj.get("rotation_degrees", 0.0)))
+    hx, hy, hz = size[0] * 0.5, size[1] * 0.5, size[2] * 0.5
+    local_vertices = [
+        (-hx, -hy, -hz),
+        (hx, -hy, -hz),
+        (hx, hy, -hz),
+        (-hx, hy, -hz),
+        (-hx, -hy, hz),
+        (hx, -hy, hz),
+        (hx, hy, hz),
+        (-hx, hy, hz),
+    ]
+    world_vertices: list[Vec3] = []
+    for vx, vy, vz in local_vertices:
+        rx, ry = rotate_xy(vx, vy, angle)
+        world_vertices.append((center[0] + rx, center[1] + ry, center[2] + vz))
+
+    projected = [project_point(vertex, camera_position, look_at, width, height, top_down=top_down) for vertex in world_vertices]
+    faces = [
+        ([0, 1, 2, 3], 0.7),
+        ([4, 5, 6, 7], 1.0),
+        ([0, 1, 5, 4], 0.86),
+        ([1, 2, 6, 5], 0.8),
+        ([2, 3, 7, 6], 0.92),
+        ([3, 0, 4, 7], 0.84),
+    ]
+    polygons: list[tuple[float, list[tuple[float, float]], tuple[int, int, int]]] = []
+    for face, shade in faces:
+        points = [projected[index] for index in face]
+        if any(point is None for point in points):
+            continue
+        assert points[0] is not None and points[1] is not None and points[2] is not None and points[3] is not None
+        polygons.append(
+            (
+                sum(point[2] for point in points) / len(points),
+                [(point[0], point[1]) for point in points],
+                shade_color(color, shade),
+            )
+        )
+    for _, coords, fill_color in sorted(polygons, key=lambda item: item[0]):
+        draw.polygon(coords, fill=(*fill_color, 240), outline=(*shade_color(fill_color, 0.72), 230))
+
+
+def draw_environment_sphere(
+    draw: Any,
+    obj: dict[str, Any],
+    camera_position: Vec3,
+    look_at: Vec3,
+    width: int,
+    height: int,
+    *,
+    top_down: bool,
+) -> None:
+    center = obj["position"]
+    size = obj["size"]
+    color = obj["color"]
+    radius = max(0.05, max(size[0], size[1], size[2]) * 0.5)
+    projected_center = project_point(center, camera_position, look_at, width, height, top_down=top_down)
+    projected_edge = project_point((center[0] + radius, center[1], center[2]), camera_position, look_at, width, height, top_down=top_down)
+    if projected_center is None or projected_edge is None:
+        return
+    px_radius = max(1.0, abs(projected_edge[0] - projected_center[0]))
+    x, y = projected_center[0], projected_center[1]
+    draw.ellipse(
+        (x - px_radius, y - px_radius, x + px_radius, y + px_radius),
+        fill=(*shade_color(color, 0.9), 238),
+        outline=(*shade_color(color, 0.65), 225),
+        width=2,
+    )
+    highlight_r = px_radius * 0.34
+    draw.ellipse(
+        (x - px_radius * 0.5, y - px_radius * 0.78, x - px_radius * 0.5 + highlight_r, y - px_radius * 0.78 + highlight_r),
+        fill=(255, 255, 255, 70),
+    )
+
+
+def draw_environment_capsule(
+    draw: Any,
+    obj: dict[str, Any],
+    camera_position: Vec3,
+    look_at: Vec3,
+    width: int,
+    height: int,
+    *,
+    top_down: bool,
+) -> None:
+    center = obj["position"]
+    size = obj["size"]
+    color = obj["color"]
+    radius = max(0.05, min(size[0], size[1]) * 0.5)
+    half_segment = max(0.0, size[2] * 0.5 - radius)
+    bottom = (center[0], center[1], center[2] - half_segment)
+    top = (center[0], center[1], center[2] + half_segment)
+    right = (center[0] + radius, center[1], center[2])
+    p_bottom = project_point(bottom, camera_position, look_at, width, height, top_down=top_down)
+    p_top = project_point(top, camera_position, look_at, width, height, top_down=top_down)
+    p_right = project_point(right, camera_position, look_at, width, height, top_down=top_down)
+    p_center = project_point(center, camera_position, look_at, width, height, top_down=top_down)
+    if p_bottom is None or p_top is None or p_right is None or p_center is None:
+        return
+    px_radius = max(1.0, abs(p_right[0] - p_center[0]))
+    x0, y0 = p_bottom[0], p_bottom[1]
+    x1, y1 = p_top[0], p_top[1]
+    width_px = px_radius * 2.0
+    draw.line((x0, y0, x1, y1), fill=(*shade_color(color, 0.88), 236), width=max(2, int(round(width_px))))
+    draw.ellipse((x0 - px_radius, y0 - px_radius, x0 + px_radius, y0 + px_radius), fill=(*shade_color(color, 0.82), 238), outline=(*shade_color(color, 0.64), 220), width=2)
+    draw.ellipse((x1 - px_radius, y1 - px_radius, x1 + px_radius, y1 + px_radius), fill=(*shade_color(color, 0.97), 242), outline=(*shade_color(color, 0.7), 220), width=2)
 
 
 def character_segments(root: Vec3, facing_degrees: float, clip_label: str, scene_time: float) -> tuple[list[tuple[Vec3, Vec3]], Vec3, Vec3]:
@@ -560,21 +859,12 @@ def render_scene_frame(
         raise RuntimeError("Pillow is required for video export. Install pillow in the GF5 environment.") from PIL_IMPORT_ERROR
     background = scene.get("background", {})
     image = Image.new("RGB", (width, height), parse_hex_color(str(background.get("color", "#f4f1ea")), (244, 241, 234)))
+    draw_skybox_gradient(image, scene)
     draw = ImageDraw.Draw(image, "RGBA")
     camera_position, look_at = camera_pose(scene, scene_time)
     top_down = str(scene.get("camera", {}).get("preset", "")) == "top_down"
-    center, radius = scene_center_and_radius(scene)
-
-    grid_extent = math.ceil(radius + 1.0)
-    for index in range(-grid_extent, grid_extent + 1):
-        for a, b in (
-            ((index, -grid_extent, 0.0), (index, grid_extent, 0.0)),
-            ((-grid_extent, index, 0.0), (grid_extent, index, 0.0)),
-        ):
-            pa = project_point((a[0] + center[0], a[1] + center[1], a[2]), camera_position, look_at, width, height, top_down=top_down)
-            pb = project_point((b[0] + center[0], b[1] + center[1], b[2]), camera_position, look_at, width, height, top_down=top_down)
-            if pa and pb:
-                draw.line((pa[0], pa[1], pb[0], pb[1]), fill=(36, 43, 45, 38), width=1)
+    draw_floor_grid(draw, scene, camera_position, look_at, width, height, top_down=top_down)
+    draw_environment_objects(draw, scene, camera_position, look_at, width, height, top_down=top_down)
 
     if proxy_context is not None:
         draw_proxy_asset_characters(
@@ -983,6 +1273,58 @@ class OffscreenAvatarRenderer:
             bg_color=self.np.asarray([0.0, 0.0, 0.0, 0.0], dtype=self.np.float32),
             ambient_light=self.np.asarray([0.22, 0.215, 0.205, 1.0], dtype=self.np.float32),
         )
+        # Add environment objects as real 3D meshes so they participate in
+        # lighting, depth testing and occlusion with avatars.
+        try:
+            env_items = normalized_environment_objects(scene_payload)
+            for obj in env_items:
+                otype = obj.get("type")
+                pos = tuple(float(v) for v in obj.get("position", (0.0, 0.0, 0.0)))
+                size = tuple(float(v) for v in obj.get("size", (0.8, 0.8, 0.8)))
+                rot_rad = math.radians(float(obj.get("rotation_degrees", 0.0)))
+                color = obj.get("color", (200, 192, 175))
+                try:
+                    if otype == "box":
+                        mesh = self.trimesh.creation.box(extents=(size[0], size[1], size[2]))
+                    elif otype == "sphere":
+                        radius = max(0.01, max(size[0], size[1], size[2]) * 0.5)
+                        mesh = self.trimesh.creation.icosphere(subdivisions=3, radius=radius)
+                    else:  # capsule
+                        radius = max(0.01, min(size[0], size[1]) * 0.5)
+                        cyl_h = max(0.0, size[2] - 2.0 * radius)
+                        mesh = self.trimesh.creation.capsule(radius=radius, height=cyl_h)
+                except Exception:
+                    # Fallback: small box
+                    mesh = self.trimesh.creation.box(extents=(size[0], size[1], size[2]))
+
+                # Apply simple flat color as vertex colors
+                try:
+                    vc = self.np.tile(self.np.asarray([int(color[0]), int(color[1]), int(color[2]), 255], dtype=self.np.uint8)[None, :], (len(mesh.vertices), 1))
+                    mesh.visual.vertex_colors = vc
+                except Exception:
+                    pass
+
+                # Build transform (rotation about Z then translation)
+                pose = self.np.eye(4, dtype=self.np.float32)
+                c = math.cos(rot_rad)
+                s = math.sin(rot_rad)
+                pose[:3, :3] = self.np.asarray([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]], dtype=self.np.float32)
+                pose[:3, 3] = self.np.asarray(pos, dtype=self.np.float32)
+
+                try:
+                    env_pymesh = self.pyrender.Mesh.from_trimesh(mesh, smooth=True)
+                    for prim in env_pymesh.primitives:
+                        prim.material.doubleSided = True
+                        prim.material.metallicFactor = 0.0
+                        prim.material.roughnessFactor = 0.78
+                        prim.material.alphaMode = "OPAQUE"
+                    pyrender_scene.add(env_pymesh, pose=pose)
+                except Exception:
+                    # If converting to a pyrender mesh fails, skip gracefully.
+                    pass
+        except Exception:
+            # Best-effort: do not fail final render if environment meshization fails.
+            pass
         for vertices, faces, vertex_colors in meshes:
             pyrender_scene.add(self.mesh_from_vertices(vertices, faces, vertex_colors))
 
@@ -1086,8 +1428,12 @@ def export_avatar_scene_video(
             scene_time = duration * frame_index / max(1, frame_count - 1)
             background = scene.get("background", {})
             image = Image.new("RGB", (width, height), parse_hex_color(str(background.get("color", "#f4f1ea")), (244, 241, 234)))
+            draw_skybox_gradient(image, scene)
             draw = ImageDraw.Draw(image, "RGBA")
-            draw_avatar_floor(draw, scene, scene_time, width, height)
+            camera_position, look_at = camera_pose(scene, scene_time)
+            top_down = str(scene.get("camera", {}).get("preset", "")) == "top_down"
+            draw_floor_grid(draw, scene, camera_position, look_at, width, height, top_down=top_down)
+            draw_environment_objects(draw, scene, camera_position, look_at, width, height, top_down=top_down)
 
             render_meshes: list[tuple[Any, Any, Any]] = []
             for character in motion_scene.characters:
@@ -1139,17 +1485,7 @@ def export_avatar_scene_video(
 def draw_avatar_floor(draw: Any, scene: dict[str, Any], scene_time: float, width: int, height: int) -> None:
     camera_position, look_at = camera_pose(scene, scene_time)
     top_down = str(scene.get("camera", {}).get("preset", "")) == "top_down"
-    center, radius = scene_center_and_radius(scene)
-    grid_extent = math.ceil(radius + 1.0)
-    for index in range(-grid_extent, grid_extent + 1):
-        for a, b in (
-            ((index, -grid_extent, 0.0), (index, grid_extent, 0.0)),
-            ((-grid_extent, index, 0.0), (grid_extent, index, 0.0)),
-        ):
-            pa = project_point((a[0] + center[0], a[1] + center[1], a[2]), camera_position, look_at, width, height, top_down=top_down)
-            pb = project_point((b[0] + center[0], b[1] + center[1], b[2]), camera_position, look_at, width, height, top_down=top_down)
-            if pa and pb:
-                draw.line((pa[0], pa[1], pb[0], pb[1]), fill=(36, 43, 45, 38), width=1)
+    draw_floor_grid(draw, scene, camera_position, look_at, width, height, top_down=top_down)
 
 
 def draw_avatar_contact_shadow(draw: Any, scene: dict[str, Any], scene_time: float, root: Vec3, width: int, height: int) -> None:

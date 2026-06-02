@@ -28,6 +28,18 @@ const CAMERA_PRESETS = [
   ["top_down", "Top down"],
 ];
 const CAMERA_TARGET_PRESETS = new Set(["slow_orbit", "follow_character", "dolly_in"]);
+const SKYBOX_PRESETS = [
+  ["none", "None"],
+  ["studio_soft", "Studio soft"],
+  ["sunset_warm", "Sunset warm"],
+  ["dusk_blue", "Dusk blue"],
+  ["overcast", "Overcast"],
+];
+const SCENE_OBJECT_TYPES = [
+  ["box", "Box"],
+  ["sphere", "Sphere"],
+  ["capsule", "Capsule"],
+];
 const DEFAULT_EXPORT = { fps: 24, width: 960, height: 540 };
 const FINAL_AVATAR_MAX_FPS = 24;
 const FINAL_AVATAR_MAX_WIDTH = 1280;
@@ -383,6 +395,9 @@ function randomAvatarColor() {
 
 function normalizeEditorScene() {
   if (!Array.isArray(app.scene?.characters)) return;
+  sceneBackground();
+  const environment = sceneEnvironment();
+  environment.objects = (environment.objects || []).map((item, index) => normalizeSceneObject(item, index)).filter(Boolean);
   const proxyAsset = defaultProxyAsset();
   app.scene.characters.forEach((character, index) => {
     character.color = normalizeCharacterColor(character.color, index);
@@ -396,6 +411,26 @@ function normalizeEditorScene() {
       clip.blend_out = normalizedClipBlend(clip, "blend_out");
     });
   });
+}
+
+function normalizeSceneObject(item, index = 0) {
+  if (!item || typeof item !== "object") return null;
+  const type = String(item.type || "box").toLowerCase();
+  if (!SCENE_OBJECT_TYPES.some(([value]) => value === type)) return null;
+  const rawPosition = Array.isArray(item.position) ? item.position : [0, 0, 0];
+  const rawSize = Array.isArray(item.size) ? item.size : [0.8, 0.8, 0.8];
+  const id = String(item.id || `${type}_${index + 1}`).trim() || `${type}_${index + 1}`;
+  const label = String(item.label || type.charAt(0).toUpperCase() + type.slice(1));
+  const color = /^#[0-9a-f]{6}$/i.test(String(item.color || "")) ? item.color : "#c8c0af";
+  return {
+    id,
+    label,
+    type,
+    position: [0, 1, 2].map((i) => Number(rawPosition[i]) || 0),
+    size: [0, 1, 2].map((i) => Math.max(0.05, Number(rawSize[i]) || 0.8)),
+    rotation_degrees: Number(item.rotation_degrees) || 0,
+    color,
+  };
 }
 
 function characterColor(character, index = 0) {
@@ -647,6 +682,8 @@ function sceneCamera() {
       preset: "slow_orbit",
       target: CAMERA_ORIGIN_TARGET,
       height: 1.35,
+      orbit_radius: null,
+      static_position: null,
     };
   }
   if (!CAMERA_PRESETS.some(([value]) => value === app.scene.camera.preset)) app.scene.camera.preset = "slow_orbit";
@@ -657,7 +694,23 @@ function sceneCamera() {
   ) {
     app.scene.camera.target = CAMERA_ORIGIN_TARGET;
   }
+  app.scene.camera.orbit_radius = optionalPositiveFloat(app.scene.camera.orbit_radius);
+  app.scene.camera.static_position = optionalVec3(app.scene.camera.static_position);
   return app.scene.camera;
+}
+
+function optionalPositiveFloat(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const result = Number(value);
+  if (!Number.isFinite(result) || result <= 0) return null;
+  return result;
+}
+
+function optionalVec3(value) {
+  if (!Array.isArray(value) || value.length < 3) return null;
+  const result = [Number(value[0]), Number(value[1]), Number(value[2])];
+  if (result.some((component) => !Number.isFinite(component))) return null;
+  return result;
 }
 
 function sceneExport() {
@@ -671,6 +724,15 @@ function sceneExport() {
 function sceneBackground() {
   if (!app.scene.background) app.scene.background = { color: "#f4f1ea", image_path: "", show_grid: true, show_floor: true };
   return app.scene.background;
+}
+
+function sceneEnvironment() {
+  if (!app.scene.environment || typeof app.scene.environment !== "object") {
+    app.scene.environment = { skybox: "studio_soft", objects: [] };
+  }
+  if (!Array.isArray(app.scene.environment.objects)) app.scene.environment.objects = [];
+  if (!SKYBOX_PRESETS.some(([value]) => value === app.scene.environment.skybox)) app.scene.environment.skybox = "studio_soft";
+  return app.scene.environment;
 }
 
 function avatarOptionsHtml(character) {
@@ -1459,6 +1521,7 @@ function renderStage() {
   updateStageZoomControls();
   clear(svg);
   drawStageGrid(svg);
+  drawStageSceneObjects(svg);
   app.scene.characters.forEach((character, index) => {
     if (!isCharacterHidden(character)) drawCharacterPath(svg, character, index);
   });
@@ -1466,7 +1529,49 @@ function renderStage() {
   drawCameraOnStage(svg);
 }
 
+function drawStageSceneObjects(svg) {
+  const objects = sceneEnvironment().objects || [];
+  for (const object of objects) {
+    const point = worldToStage(object.position || [0, 0, 0]);
+    const sx = Math.max(8, (Number(object.size?.[0]) || 0.8) * STAGE_SCALE * 0.55);
+    const sy = Math.max(8, (Number(object.size?.[1]) || 0.8) * STAGE_SCALE * 0.55);
+    const angle = Number(object.rotation_degrees) || 0;
+    if (object.type === "sphere") {
+      const r = Math.max(6, (sx + sy) * 0.25);
+      svg.appendChild(makeSvg("circle", { cx: point.x, cy: point.y, r, fill: `${object.color || "#c8c0af"}88`, stroke: object.color || "#c8c0af", "stroke-width": 1.5 }));
+    } else if (object.type === "capsule") {
+      const h = Math.max(12, (Number(object.size?.[2]) || 1.4) * STAGE_SCALE * 0.65);
+      const rx = Math.max(6, sx * 0.28);
+      svg.appendChild(makeSvg("rect", {
+        x: point.x - rx,
+        y: point.y - h * 0.5,
+        width: rx * 2,
+        height: h,
+        rx,
+        ry: rx,
+        fill: `${object.color || "#c8c0af"}88`,
+        stroke: object.color || "#c8c0af",
+        "stroke-width": 1.5,
+        transform: `rotate(${angle} ${point.x} ${point.y})`,
+      }));
+    } else {
+      svg.appendChild(makeSvg("rect", {
+        x: point.x - sx * 0.5,
+        y: point.y - sy * 0.5,
+        width: sx,
+        height: sy,
+        fill: `${object.color || "#c8c0af"}88`,
+        stroke: object.color || "#c8c0af",
+        "stroke-width": 1.5,
+        transform: `rotate(${angle} ${point.x} ${point.y})`,
+      }));
+    }
+    svg.appendChild(makeSvg("text", { x: point.x + 7, y: point.y - 8, class: "stage-active-label" }, [document.createTextNode(object.label || object.type)]));
+  }
+}
+
 function drawStageGrid(svg) {
+  if (!sceneBackground().show_grid) return;
   const size = stageViewportSize(svg);
   const box = stageViewBox(size);
   const originX = size.width / 2;
@@ -1606,6 +1711,9 @@ function fitStageToScene() {
 
 function stageContentBounds() {
   const points = [];
+  for (const object of sceneEnvironment().objects || []) {
+    points.push(worldToStage(object.position || [0, 0, 0]));
+  }
   for (const character of app.scene.characters) {
     if (isCharacterHidden(character)) continue;
     for (const key of sortedKeys(character)) points.push(worldToStage(key.position));
@@ -1799,12 +1907,15 @@ function cameraPoseAt(time) {
   let lookAt = [center[0], center[1], Math.max(0.6, height * 0.72)];
   let position;
   const target = cameraTargetLookAt(camera, time, height);
+  const orbitRadius = optionalPositiveFloat(camera.orbit_radius);
+  const staticPosition = optionalVec3(camera.static_position);
   if (camera.preset === "front_stage") {
     position = [lookAt[0], lookAt[1] + radius, lookAt[2] + height * 0.85];
   } else if (camera.preset === "slow_orbit") {
     if (target) lookAt = target;
     const angle = 2 * Math.PI * (time / Math.max(0.001, app.scene.duration));
-    position = [lookAt[0] + Math.sin(angle) * radius, lookAt[1] + Math.cos(angle) * radius, lookAt[2] + height * 0.9];
+    const effectiveRadius = orbitRadius !== null ? orbitRadius : radius;
+    position = [lookAt[0] + Math.sin(angle) * effectiveRadius, lookAt[1] + Math.cos(angle) * effectiveRadius, lookAt[2] + height * 0.9];
   } else if (camera.preset === "follow_character") {
     if (target) lookAt = target;
     position = [lookAt[0], lookAt[1] - 2.35, lookAt[2] + height * 0.55];
@@ -1815,6 +1926,8 @@ function cameraPoseAt(time) {
   } else if (camera.preset === "top_down") {
     position = [center[0], center[1] + 0.001, radius * 1.75];
     lookAt = [center[0], center[1], 0];
+  } else if (staticPosition !== null) {
+    position = staticPosition;
   } else {
     position = [lookAt[0] + 0.45 * radius, lookAt[1] + 1.15 * radius, lookAt[2] + height * 0.95];
   }
@@ -2033,7 +2146,10 @@ function renderShotPreview() {
   const topDown = camera.preset === "top_down";
   const background = sceneBackground();
   svg.appendChild(makeSvg("rect", { x: 0, y: 0, width, height, fill: background.color || "#f4f1ea" }));
+  drawShotSkybox(svg, width, height, sceneEnvironment().skybox);
+  drawShotFloor(svg, pose, width, height, topDown);
   drawShotGrid(svg, pose, width, height, topDown);
+  drawShotEnvironmentObjects(svg, pose, width, height, topDown);
   const items = app.scene.characters.map((character, index) => {
     if (isCharacterHidden(character)) return null;
     const root = rootAt(character, app.currentTime);
@@ -2043,7 +2159,75 @@ function renderShotPreview() {
   for (const item of items) drawShotCharacter(svg, item.character, item.index, item.root, pose, width, height, topDown);
 }
 
+function shotSkyboxColors(preset) {
+  const palettes = {
+    studio_soft: ["#e0ebf7", "#f2eee0"],
+    sunset_warm: ["#fdbc92", "#f5d5aa"],
+    dusk_blue: ["#5879ab", "#90a3c6"],
+    overcast: ["#bfc7cf", "#d6dadc"],
+  };
+  return palettes[preset] || null;
+}
+
+function drawShotSkybox(svg, width, height, preset) {
+  const colors = shotSkyboxColors(preset);
+  if (!colors) return;
+  const id = `shotSky_${preset.replace(/[^a-z0-9_]/ig, "_")}`;
+  const defs = makeSvg("defs");
+  const gradient = makeSvg("linearGradient", { id, x1: "0", y1: "0", x2: "0", y2: "1" });
+  gradient.appendChild(makeSvg("stop", { offset: "0%", "stop-color": colors[0], "stop-opacity": "0.85" }));
+  gradient.appendChild(makeSvg("stop", { offset: "66%", "stop-color": colors[1], "stop-opacity": "0.8" }));
+  defs.appendChild(gradient);
+  svg.appendChild(defs);
+  svg.appendChild(makeSvg("rect", { x: 0, y: 0, width, height, fill: `url(#${id})` }));
+}
+
+function drawShotEnvironmentObjects(svg, pose, width, height, topDown) {
+  const objects = sceneEnvironment().objects || [];
+  const drawOrder = objects.map((object) => {
+    const center = projectShot(object.position || [0, 0, 0], pose, width, height, topDown);
+    return center ? { object, depth: center.scale, center } : null;
+  }).filter(Boolean).sort((a, b) => a.depth - b.depth);
+
+  for (const entry of drawOrder) {
+    const object = entry.object;
+    const center = entry.center;
+    const sx = Math.max(4, (Number(object.size?.[0]) || 0.8) * center.scale * 0.32);
+    const sy = Math.max(4, (Number(object.size?.[1]) || 0.8) * center.scale * 0.32);
+    const color = object.color || "#c8c0af";
+    if (object.type === "sphere") {
+      const r = Math.max(4, (sx + sy) * 0.5);
+      svg.appendChild(makeSvg("circle", { cx: center.x, cy: center.y, r, fill: `${color}cc`, stroke: color, "stroke-width": 1.2 }));
+    } else if (object.type === "capsule") {
+      const h = Math.max(8, (Number(object.size?.[2]) || 1.2) * center.scale * 0.45);
+      const r = Math.max(4, sx * 0.45);
+      svg.appendChild(makeSvg("rect", {
+        x: center.x - r,
+        y: center.y - h * 0.5,
+        width: r * 2,
+        height: h,
+        rx: r,
+        ry: r,
+        fill: `${color}cc`,
+        stroke: color,
+        "stroke-width": 1.2,
+      }));
+    } else {
+      svg.appendChild(makeSvg("rect", {
+        x: center.x - sx * 0.5,
+        y: center.y - sy * 0.5,
+        width: sx,
+        height: sy,
+        fill: `${color}cc`,
+        stroke: color,
+        "stroke-width": 1.2,
+      }));
+    }
+  }
+}
+
 function drawShotGrid(svg, pose, width, height, topDown) {
+  if (!sceneBackground().show_grid) return;
   const { center, radius } = sceneCenterAndRadius();
   const extent = Math.ceil(radius + 1);
   for (let i = -extent; i <= extent; i += 1) {
@@ -2057,6 +2241,22 @@ function drawShotGrid(svg, pose, width, height, topDown) {
       if (pa && pb) svg.appendChild(makeSvg("line", { x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y, class: "shot-floor" }));
     }
   }
+}
+
+function drawShotFloor(svg, pose, width, height, topDown) {
+  if (!sceneBackground().show_floor) return;
+  const { center, radius } = sceneCenterAndRadius();
+  const extent = radius + 1.5;
+  const corners = [
+    [center[0] - extent, center[1] - extent, 0],
+    [center[0] + extent, center[1] - extent, 0],
+    [center[0] + extent, center[1] + extent, 0],
+    [center[0] - extent, center[1] + extent, 0],
+  ];
+  const projected = corners.map((point) => projectShot(point, pose, width, height, topDown));
+  if (projected.some((point) => !point)) return;
+  const points = projected.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
+  svg.appendChild(makeSvg("polygon", { points, fill: "rgba(120, 123, 118, 0.12)" }));
 }
 
 function drawShotCharacter(svg, character, index, root, pose, width, height, topDown) {
@@ -2954,7 +3154,120 @@ function renderMotionPreviewPanel() {
 }
 
 function renderSceneInspector(panel) {
-  panel.innerHTML = "";
+  const background = sceneBackground();
+  const environment = sceneEnvironment();
+  const objectRows = (environment.objects || []).map((object, index) => {
+    const typeOptions = SCENE_OBJECT_TYPES
+      .map(([value, label]) => `<option value="${value}" ${object.type === value ? "selected" : ""}>${label}</option>`)
+      .join("");
+    return `
+      <div class="clip-row" data-object-index="${index}" style="display:block; padding:8px 10px; margin-bottom:8px; border:1px solid #d8dfe0; border-radius:8px;">
+        <div class="field"><label>Label</label><input data-object-field="label" value="${escapeHtml(object.label || "")}"></div>
+        <div class="field"><label>Type</label><select data-object-field="type">${typeOptions}</select></div>
+        <div class="clip-two-column-row">
+          <div class="field"><label>X</label><input type="number" step="0.1" data-object-field="x" value="${Number(object.position?.[0] || 0).toFixed(2)}"></div>
+          <div class="field"><label>Y</label><input type="number" step="0.1" data-object-field="y" value="${Number(object.position?.[1] || 0).toFixed(2)}"></div>
+        </div>
+        <div class="clip-two-column-row">
+          <div class="field"><label>Z</label><input type="number" step="0.1" data-object-field="z" value="${Number(object.position?.[2] || 0).toFixed(2)}"></div>
+          <div class="field"><label>Yaw</label><input type="number" step="5" data-object-field="rotation" value="${Number(object.rotation_degrees || 0).toFixed(1)}"></div>
+        </div>
+        <div class="clip-three-column-row" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+          <div class="field"><label>Size X</label><input type="number" min="0.05" step="0.05" data-object-field="sx" value="${Number(object.size?.[0] || 0.8).toFixed(2)}"></div>
+          <div class="field"><label>Size Y</label><input type="number" min="0.05" step="0.05" data-object-field="sy" value="${Number(object.size?.[1] || 0.8).toFixed(2)}"></div>
+          <div class="field"><label>Size Z</label><input type="number" min="0.05" step="0.05" data-object-field="sz" value="${Number(object.size?.[2] || 0.8).toFixed(2)}"></div>
+        </div>
+        <div class="clip-two-column-row">
+          <div class="field"><label>Color</label><input type="color" data-object-field="color" value="${escapeHtml(object.color || "#c8c0af")}"></div>
+          <div class="button-row" style="align-items:end;"><button type="button" data-object-remove="${index}" class="secondary-action">Remove</button></div>
+        </div>
+      </div>
+    `;
+  }).join("");
+  panel.innerHTML = `
+    <div class="field"><label>Background color</label><input id="sceneBgColor" type="color" value="${escapeHtml(background.color || "#f4f1ea")}"></div>
+    <div class="field"><label>Skybox</label><select id="sceneSkybox">${SKYBOX_PRESETS.map(([value, label]) => `<option value="${value}" ${environment.skybox === value ? "selected" : ""}>${label}</option>`).join("")}</select></div>
+    <div class="clip-two-column-row">
+      <label class="checkbox-row"><input id="sceneShowGrid" type="checkbox" ${background.show_grid ? "checked" : ""}> Show floor grid</label>
+      <label class="checkbox-row"><input id="sceneShowFloor" type="checkbox" ${background.show_floor ? "checked" : ""}> Show floor base</label>
+    </div>
+    <div class="button-row" style="margin-top:6px; margin-bottom:8px;">
+      <select id="addSceneObjectType">${SCENE_OBJECT_TYPES.map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select>
+      <button id="addSceneObject" type="button">Add object</button>
+    </div>
+    <div id="sceneObjectsList">${objectRows || "<div class=\"empty-hint\">No scene objects yet.</div>"}</div>
+  `;
+
+  $("#sceneBgColor").addEventListener("change", (event) => {
+    pushUndoSnapshot();
+    background.color = event.target.value;
+    renderAll();
+  });
+  $("#sceneSkybox").addEventListener("change", (event) => {
+    pushUndoSnapshot();
+    environment.skybox = event.target.value;
+    renderAll();
+  });
+  $("#sceneShowGrid").addEventListener("change", (event) => {
+    pushUndoSnapshot();
+    background.show_grid = Boolean(event.target.checked);
+    renderAll();
+  });
+  $("#sceneShowFloor").addEventListener("change", (event) => {
+    pushUndoSnapshot();
+    background.show_floor = Boolean(event.target.checked);
+    renderAll();
+  });
+  $("#addSceneObject").addEventListener("click", () => {
+    pushUndoSnapshot();
+    const type = String($("#addSceneObjectType")?.value || "box");
+    const item = normalizeSceneObject({
+      id: `${type}_${(environment.objects || []).length + 1}`,
+      label: type.charAt(0).toUpperCase() + type.slice(1),
+      type,
+      position: [0, 0, type === "sphere" ? 0.5 : 0.4],
+      size: type === "capsule" ? [0.7, 0.7, 1.8] : type === "sphere" ? [1, 1, 1] : [1.2, 1.2, 0.9],
+      rotation_degrees: 0,
+      color: "#c8c0af",
+    }, environment.objects.length);
+    if (item) environment.objects.push(item);
+    renderAll();
+  });
+
+  panel.querySelectorAll("[data-object-remove]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = Number(button.getAttribute("data-object-remove"));
+      if (!Number.isFinite(index)) return;
+      pushUndoSnapshot();
+      environment.objects.splice(index, 1);
+      renderAll();
+    });
+  });
+
+  panel.querySelectorAll("[data-object-index]").forEach((row) => {
+    const index = Number(row.getAttribute("data-object-index"));
+    if (!Number.isFinite(index) || !environment.objects[index]) return;
+    row.querySelectorAll("input, select").forEach((input) => {
+      input.addEventListener("change", () => {
+        const field = input.getAttribute("data-object-field");
+        if (!field) return;
+        const object = environment.objects[index];
+        pushUndoSnapshot();
+        if (field === "label") object.label = String(input.value || object.type);
+        else if (field === "type") object.type = input.value;
+        else if (field === "x") object.position[0] = Number(input.value) || 0;
+        else if (field === "y") object.position[1] = Number(input.value) || 0;
+        else if (field === "z") object.position[2] = Number(input.value) || 0;
+        else if (field === "rotation") object.rotation_degrees = Number(input.value) || 0;
+        else if (field === "sx") object.size[0] = Math.max(0.05, Number(input.value) || 0.8);
+        else if (field === "sy") object.size[1] = Math.max(0.05, Number(input.value) || 0.8);
+        else if (field === "sz") object.size[2] = Math.max(0.05, Number(input.value) || 0.8);
+        else if (field === "color") object.color = /^#[0-9a-f]{6}$/i.test(input.value) ? input.value : "#c8c0af";
+        environment.objects[index] = normalizeSceneObject(object, index);
+        renderAll();
+      });
+    });
+  });
 }
 
 function renderExportPanel() {
@@ -2974,11 +3287,28 @@ function renderExportPanel() {
   const originOption = `<option value="${CAMERA_ORIGIN_TARGET}" ${camera.target === CAMERA_ORIGIN_TARGET ? "selected" : ""}>Scene origin</option>`;
   const avatarOptions = app.scene.characters.map((character) => `<option value="${escapeHtml(character.id)}" ${character.id === camera.target ? "selected" : ""}>${escapeHtml(character.label)}</option>`).join("");
   const targetOptions = `${originOption}${avatarOptions}`;
+  const { radius: autoRadius } = sceneCenterAndRadius();
+  const orbitRadiusValue = camera.orbit_radius !== null && camera.orbit_radius !== undefined ? camera.orbit_radius : "";
+  const orbitRadiusPlaceholder = autoRadius.toFixed(2);
+  const orbitField = camera.preset === "slow_orbit"
+    ? `<div class="field"><label>Orbit radius (m)</label><input id="cameraOrbitRadius" type="number" min="0" step="0.1" value="${orbitRadiusValue}" placeholder="auto (${orbitRadiusPlaceholder})"></div>`
+    : "";
+  const staticPos = camera.static_position || [null, null, null];
+  const staticField = camera.preset === "wide_static"
+    ? `<div class="field"><label>Static camera position (x, y, z)</label>
+        <div class="export-grid">
+          <input id="cameraStaticX" type="number" step="0.1" value="${staticPos[0] !== null && staticPos[0] !== undefined ? staticPos[0] : ""}" placeholder="x">
+          <input id="cameraStaticY" type="number" step="0.1" value="${staticPos[1] !== null && staticPos[1] !== undefined ? staticPos[1] : ""}" placeholder="y">
+          <input id="cameraStaticZ" type="number" step="0.1" value="${staticPos[2] !== null && staticPos[2] !== undefined ? staticPos[2] : ""}" placeholder="z">
+        </div></div>`
+    : "";
   panel.innerHTML = `
     <svg id="shotPreviewSvg" class="shot-preview" viewBox="0 0 360 203" aria-label="Camera shot preview"></svg>
     <div class="field"><label>Camera</label><select id="cameraPreset">${CAMERA_PRESETS.map(([value, label]) => `<option value="${value}" ${value === camera.preset ? "selected" : ""}>${label}</option>`).join("")}</select></div>
     <div class="field"><label>${targetLabel}</label><select id="cameraTarget" ${targetEnabled ? "" : "disabled"}>${targetOptions}</select></div>
     <div class="field"><label>Camera height</label><input id="cameraHeight" type="number" min="0.4" step="0.05" value="${camera.height}"></div>
+    ${orbitField}
+    ${staticField}
     <div class="export-grid">
       <div class="field"><label>Width</label><input id="exportWidth" type="number" min="320" max="${FINAL_AVATAR_MAX_WIDTH}" step="2" value="${exportSettings.width}"></div>
       <div class="field"><label>Height</label><input id="exportHeight" type="number" min="180" max="${FINAL_AVATAR_MAX_HEIGHT}" step="2" value="${exportSettings.height}"></div>
@@ -2995,6 +3325,24 @@ function renderExportPanel() {
   $("#cameraPreset").addEventListener("change", (event) => { pushUndoSnapshot(); camera.preset = event.target.value; renderAll(); });
   $("#cameraTarget").addEventListener("change", (event) => { pushUndoSnapshot(); camera.target = event.target.value; renderAll(); });
   $("#cameraHeight").addEventListener("change", (event) => { pushUndoSnapshot(); camera.height = Math.max(0.4, Number(event.target.value)); renderAll(); });
+  const orbitInput = $("#cameraOrbitRadius");
+  if (orbitInput) {
+    orbitInput.addEventListener("change", (event) => {
+      pushUndoSnapshot();
+      camera.orbit_radius = optionalPositiveFloat(event.target.value);
+      renderAll();
+    });
+  }
+  const staticInputs = [$("#cameraStaticX"), $("#cameraStaticY"), $("#cameraStaticZ")];
+  if (staticInputs.every((input) => input)) {
+    const commitStatic = () => {
+      pushUndoSnapshot();
+      const values = staticInputs.map((input) => Number(input.value));
+      camera.static_position = values.every((value) => Number.isFinite(value)) ? values : null;
+      renderAll();
+    };
+    staticInputs.forEach((input) => input.addEventListener("change", commitStatic));
+  }
   $("#exportFps").addEventListener("change", (event) => { pushUndoSnapshot(); exportSettings.fps = clamp(Number(event.target.value), 1, FINAL_AVATAR_MAX_FPS); renderAll(); });
   $("#exportWidth").addEventListener("change", (event) => { pushUndoSnapshot(); exportSettings.width = evenNumber(clamp(Number(event.target.value), 320, FINAL_AVATAR_MAX_WIDTH)); renderAll(); });
   $("#exportHeight").addEventListener("change", (event) => { pushUndoSnapshot(); exportSettings.height = evenNumber(clamp(Number(event.target.value), 180, FINAL_AVATAR_MAX_HEIGHT)); renderAll(); });

@@ -15,6 +15,15 @@ CAMERA_ORIGIN_TARGET = "__origin__"
 EXPORT_MAX_FPS = 24
 EXPORT_MAX_WIDTH = 1280
 EXPORT_MAX_HEIGHT = 720
+SCENE_OBJECT_MAX = 48
+SCENE_OBJECT_TYPES = {"box", "sphere", "capsule"}
+SKYBOX_PRESETS = {
+    "none",
+    "studio_soft",
+    "sunset_warm",
+    "dusk_blue",
+    "overcast",
+}
 CHARACTER_COLOR_PRESETS = (
     "#2f7f7b",
     "#3f7db8",
@@ -502,6 +511,10 @@ def default_scene(motions: list[dict[str, Any]], proxy_assets: list[str]) -> dic
             "show_grid": True,
             "show_floor": True,
         },
+        "environment": {
+            "skybox": "studio_soft",
+            "objects": [],
+        },
         "camera": {
             "preset": "slow_orbit",
             "target": CAMERA_ORIGIN_TARGET,
@@ -607,6 +620,7 @@ def normalize_scene(
         "version": SCENE_VERSION,
         "duration": max(0.5, float(raw_scene.get("duration", 8.0))),
         "background": normalize_background(raw_scene.get("background", {})),
+        "environment": normalize_environment(raw_scene.get("environment", {})),
         "camera": normalize_camera(raw_scene.get("camera", {})),
         "export": normalize_export(raw_scene.get("export", {})),
         "characters": [],
@@ -644,6 +658,47 @@ def normalize_background(raw: Any) -> dict[str, Any]:
     }
 
 
+def normalize_environment(raw: Any) -> dict[str, Any]:
+    raw = raw if isinstance(raw, dict) else {}
+    skybox = str(raw.get("skybox", "studio_soft")).strip().lower()
+    if skybox not in SKYBOX_PRESETS:
+        skybox = "studio_soft"
+    raw_objects = raw.get("objects", [])
+    items = raw_objects if isinstance(raw_objects, list) else []
+    objects: list[dict[str, Any]] = []
+    for index, item in enumerate(items[:SCENE_OBJECT_MAX]):
+        if not isinstance(item, dict):
+            continue
+        normalized = normalize_environment_object(item, index)
+        if normalized is not None:
+            objects.append(normalized)
+    return {
+        "skybox": skybox,
+        "objects": objects,
+    }
+
+
+def normalize_environment_object(raw: dict[str, Any], index: int) -> dict[str, Any] | None:
+    object_type = str(raw.get("type", "box")).strip().lower()
+    if object_type not in SCENE_OBJECT_TYPES:
+        return None
+    raw_color = str(raw.get("color", "#c8c0af"))
+    color = raw_color if re.fullmatch(r"#[0-9a-fA-F]{6}", raw_color) else "#c8c0af"
+    position = normalize_vec3(raw.get("position", [0.0, 0.0, 0.0]))
+    size = normalize_vec3(raw.get("size", [0.8, 0.8, 0.8]))
+    size = [max(0.05, float(value)) for value in size]
+    rotation = float(raw.get("rotation_degrees", 0.0))
+    return {
+        "id": sanitize_id(str(raw.get("id", f"{object_type}_{index + 1}")), f"{object_type}_{index + 1}"),
+        "label": str(raw.get("label", object_type.title())),
+        "type": object_type,
+        "position": position,
+        "size": size,
+        "rotation_degrees": rotation,
+        "color": color,
+    }
+
+
 def normalize_camera(raw: Any) -> dict[str, Any]:
     raw = raw if isinstance(raw, dict) else {}
     preset = str(raw.get("preset", "slow_orbit"))
@@ -653,7 +708,30 @@ def normalize_camera(raw: Any) -> dict[str, Any]:
         "preset": preset,
         "target": str(raw.get("target", "")),
         "height": max(0.4, float(raw.get("height", 1.35))),
+        "orbit_radius": normalize_optional_positive_float(raw.get("orbit_radius")),
+        "static_position": normalize_optional_vec3(raw.get("static_position")),
     }
+
+
+def normalize_optional_positive_float(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return None
+    if result != result or result in (float("inf"), float("-inf")) or result <= 0.0:
+        return None
+    return result
+
+
+def normalize_optional_vec3(value: Any) -> list[float] | None:
+    if not isinstance(value, (list, tuple)) or len(value) < 3:
+        return None
+    try:
+        return [float(value[index]) for index in range(3)]
+    except (TypeError, ValueError):
+        return None
 
 
 def normalize_export(raw: Any) -> dict[str, Any]:
