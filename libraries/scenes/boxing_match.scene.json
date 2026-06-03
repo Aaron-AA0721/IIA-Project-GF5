@@ -27,7 +27,7 @@
       0.5,
       0.9
     ],
-    "fov": 60.0
+    "fov": 30.0
   },
   "export": {
     "fps": 24,
@@ -106,6 +106,16 @@
           "clip": "Custom: dodge_movebackward",
           "start": 12.4,
           "duration": 2.4,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: HY-Motion: Two person boxing_2(modified)",
+          "start": 14.8,
+          "duration": 2.966667,
           "trim_start": 0.0,
           "trim_end": null,
           "root_mode": "path",
@@ -236,6 +246,16 @@
           "root_mode": "path",
           "blend_in": 0.45,
           "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: HY-Motion: a boxer got hit on the face, head  snaps back and fall down backwards",
+          "start": 15.1,
+          "duration": 1.666667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
         }
       ],
       "root_keys": [
@@ -264,7 +284,27 @@
           "time": 14.8,
           "position": [
             0.0,
-            1.0,
+            0.8,
+            0.0
+          ],
+          "facing_degrees": 180.0
+        },
+        {
+          "id": "k3",
+          "time": 15.6,
+          "position": [
+            0.0,
+            0.8,
+            0.0
+          ],
+          "facing_degrees": 180.0
+        },
+        {
+          "id": "k4",
+          "time": 16.0,
+          "position": [
+            0.0,
+            1.5,
             0.0
           ],
           "facing_degrees": 180.0
@@ -280,6 +320,18 @@
         {
           "from": "k1",
           "to": "k2",
+          "mode": "curve",
+          "facing": "manual"
+        },
+        {
+          "from": "k2",
+          "to": "k3",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k3",
+          "to": "k4",
           "mode": "curve",
           "facing": "manual"
         }
