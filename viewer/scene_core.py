@@ -704,12 +704,17 @@ def normalize_camera(raw: Any) -> dict[str, Any]:
     preset = str(raw.get("preset", "slow_orbit"))
     if preset not in {"wide_static", "front_stage", "slow_orbit", "follow_character", "dolly_in", "top_down"}:
         preset = "slow_orbit"
+    fov = normalize_optional_positive_float(raw.get("fov"))
+    if fov is not None:
+        fov = max(5.0, min(170.0, fov))
     return {
         "preset": preset,
         "target": str(raw.get("target", "")),
         "height": max(0.4, float(raw.get("height", 1.35))),
         "orbit_radius": normalize_optional_positive_float(raw.get("orbit_radius")),
         "static_position": normalize_optional_vec3(raw.get("static_position")),
+        "static_look_at": normalize_optional_vec3(raw.get("static_look_at")),
+        "fov": fov,
     }
 
 

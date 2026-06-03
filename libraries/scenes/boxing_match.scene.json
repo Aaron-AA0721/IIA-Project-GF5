@@ -1,7 +1,7 @@
 {
   "format": "gf5_motion_scene",
   "version": 3,
-  "duration": 20.0,
+  "duration": 22.5,
   "background": {
     "color": "#f4f1ea",
     "image_path": "",
@@ -14,14 +14,20 @@
   },
   "camera": {
     "preset": "wide_static",
-    "target": "character_2",
+    "target": "character_4",
     "height": 1.45,
     "orbit_radius": null,
     "static_position": [
-      5.0,
-      2.0,
-      1.0
-    ]
+      4.0,
+      0.5,
+      1.5
+    ],
+    "static_look_at": [
+      0.0,
+      0.5,
+      0.9
+    ],
+    "fov": 60.0
   },
   "export": {
     "fps": 24,
@@ -57,8 +63,18 @@
           "blend_out": 0.45
         },
         {
-          "clip": "Custom: HY-Motion: Two person boxing_2(modified)",
+          "clip": "Custom: HY-Motion: a person dodging during a boxing match to avoid being hit (3)",
           "start": 4.0,
+          "duration": 2.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: HY-Motion: Two person boxing_2(modified)",
+          "start": 6.0,
           "duration": 2.966667,
           "trim_start": 0.0,
           "trim_end": null,
@@ -68,7 +84,7 @@
         },
         {
           "clip": "Custom: HY-Motion: Two person boxing_2(modified)",
-          "start": 7.0,
+          "start": 9.0,
           "duration": 1.4,
           "trim_start": 0.0,
           "trim_end": null,
@@ -78,7 +94,7 @@
         },
         {
           "clip": "Custom: dodge_movebackward",
-          "start": 8.4,
+          "start": 10.4,
           "duration": 2.0,
           "trim_start": 0.0,
           "trim_end": null,
@@ -88,7 +104,7 @@
         },
         {
           "clip": "Custom: dodge_movebackward",
-          "start": 10.4,
+          "start": 12.4,
           "duration": 2.4,
           "trim_start": 0.0,
           "trim_end": null,
@@ -100,7 +116,7 @@
       "root_keys": [
         {
           "id": "k0",
-          "time": 4.0,
+          "time": 6.0,
           "position": [
             0.0,
             0.0,
@@ -110,7 +126,7 @@
         },
         {
           "id": "k2",
-          "time": 8.4,
+          "time": 10.4,
           "position": [
             0.0,
             2.0,
@@ -120,7 +136,7 @@
         },
         {
           "id": "k1",
-          "time": 12.8,
+          "time": 14.8,
           "position": [
             0.0,
             0.0,
@@ -172,7 +188,7 @@
           "blend_out": 0.45
         },
         {
-          "clip": "Custom: dodge_movebackward",
+          "clip": "Custom: HY-Motion: a person dodging during a boxing match to avoid being hit (4)",
           "start": 4.0,
           "duration": 2.0,
           "trim_start": 0.0,
@@ -184,6 +200,16 @@
         {
           "clip": "Custom: dodge_movebackward",
           "start": 6.0,
+          "duration": 2.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: dodge_movebackward",
+          "start": 8.0,
           "duration": 2.4,
           "trim_start": 0.0,
           "trim_end": null,
@@ -193,7 +219,7 @@
         },
         {
           "clip": "Custom: HY-Motion: Two person boxing_2(modified)",
-          "start": 8.4,
+          "start": 10.4,
           "duration": 2.966667,
           "trim_start": 0.0,
           "trim_end": null,
@@ -203,7 +229,7 @@
         },
         {
           "clip": "Custom: HY-Motion: Two person boxing_2(modified)",
-          "start": 11.4,
+          "start": 13.4,
           "duration": 1.4,
           "trim_start": 0.0,
           "trim_end": null,
@@ -215,7 +241,7 @@
       "root_keys": [
         {
           "id": "k0",
-          "time": 4.0,
+          "time": 6.0,
           "position": [
             0.0,
             1.0,
@@ -225,7 +251,7 @@
         },
         {
           "id": "k1",
-          "time": 8.4,
+          "time": 10.4,
           "position": [
             0.0,
             3.0,
@@ -235,7 +261,7 @@
         },
         {
           "id": "k2",
-          "time": 12.8,
+          "time": 14.8,
           "position": [
             0.0,
             1.0,
@@ -258,6 +284,38 @@
           "facing": "manual"
         }
       ]
+    },
+    {
+      "id": "character_4",
+      "label": "Avatar 4",
+      "color": "#c04848",
+      "proxy_asset": "SMPL-24 Proxy",
+      "avatar_asset": "",
+      "track": [
+        {
+          "clip": "Custom: start_match_3",
+          "start": 0.0,
+          "duration": 6.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        }
+      ],
+      "root_keys": [
+        {
+          "id": "k0",
+          "time": 0.0,
+          "position": [
+            -1.0,
+            0.5,
+            0.0
+          ],
+          "facing_degrees": 90.0
+        }
+      ],
+      "root_segments": []
     }
   ]
 }

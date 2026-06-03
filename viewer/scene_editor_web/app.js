@@ -684,6 +684,8 @@ function sceneCamera() {
       height: 1.35,
       orbit_radius: null,
       static_position: null,
+      static_look_at: null,
+      fov: null,
     };
   }
   if (!CAMERA_PRESETS.some(([value]) => value === app.scene.camera.preset)) app.scene.camera.preset = "slow_orbit";
@@ -696,6 +698,9 @@ function sceneCamera() {
   }
   app.scene.camera.orbit_radius = optionalPositiveFloat(app.scene.camera.orbit_radius);
   app.scene.camera.static_position = optionalVec3(app.scene.camera.static_position);
+  app.scene.camera.static_look_at = optionalVec3(app.scene.camera.static_look_at);
+  const fov = optionalPositiveFloat(app.scene.camera.fov);
+  app.scene.camera.fov = fov === null ? null : Math.max(5, Math.min(170, fov));
   return app.scene.camera;
 }
 
@@ -1909,6 +1914,7 @@ function cameraPoseAt(time) {
   const target = cameraTargetLookAt(camera, time, height);
   const orbitRadius = optionalPositiveFloat(camera.orbit_radius);
   const staticPosition = optionalVec3(camera.static_position);
+  const staticLookAt = optionalVec3(camera.static_look_at);
   if (camera.preset === "front_stage") {
     position = [lookAt[0], lookAt[1] + radius, lookAt[2] + height * 0.85];
   } else if (camera.preset === "slow_orbit") {
@@ -1926,12 +1932,22 @@ function cameraPoseAt(time) {
   } else if (camera.preset === "top_down") {
     position = [center[0], center[1] + 0.001, radius * 1.75];
     lookAt = [center[0], center[1], 0];
-  } else if (staticPosition !== null) {
-    position = staticPosition;
   } else {
-    position = [lookAt[0] + 0.45 * radius, lookAt[1] + 1.15 * radius, lookAt[2] + height * 0.95];
+    if (staticPosition !== null) {
+      position = staticPosition;
+    } else {
+      position = [lookAt[0] + 0.45 * radius, lookAt[1] + 1.15 * radius, lookAt[2] + height * 0.95];
+    }
+    if (staticLookAt !== null) lookAt = staticLookAt;
   }
   return { position, lookAt };
+}
+
+function effectiveFovDegrees(camera, topDown) {
+  const fov = optionalPositiveFloat(camera?.fov);
+  const fallback = topDown ? 38 : 45;
+  const value = fov !== null ? fov : fallback;
+  return Math.max(5, Math.min(170, value));
 }
 
 function cameraTargetLookAt(camera, time, height) {
@@ -2117,7 +2133,7 @@ function slerpQuaternion(a, b, alpha) {
   return a.map((value, index) => value * scale0 + q1[index] * scale1);
 }
 
-function projectShot(point, pose, width, height, topDown) {
+function projectShot(point, pose, width, height, topDown, fovDegrees) {
   const forward = normalizeVec([pose.lookAt[0] - pose.position[0], pose.lookAt[1] - pose.position[1], pose.lookAt[2] - pose.position[2]]);
   let right = crossVec(forward, [0, 0, 1]);
   if (Math.hypot(...right) < 1e-5) right = [1, 0, 0];
@@ -2126,7 +2142,8 @@ function projectShot(point, pose, width, height, topDown) {
   const rel = [point[0] - pose.position[0], point[1] - pose.position[1], point[2] - pose.position[2]];
   const depth = dotVec(rel, forward);
   if (depth <= 0.03) return null;
-  const fov = (topDown ? 38 : 45) * Math.PI / 180;
+  const degrees = Number.isFinite(fovDegrees) && fovDegrees > 0 ? fovDegrees : (topDown ? 38 : 45);
+  const fov = degrees * Math.PI / 180;
   const focal = 0.5 * height / Math.tan(fov * 0.5);
   return {
     x: width * 0.5 + dotVec(rel, right) * focal / depth,
@@ -2144,19 +2161,20 @@ function renderShotPreview() {
   const pose = cameraPoseAt(app.currentTime);
   const camera = sceneCamera();
   const topDown = camera.preset === "top_down";
+  const fovDegrees = effectiveFovDegrees(camera, topDown);
   const background = sceneBackground();
   svg.appendChild(makeSvg("rect", { x: 0, y: 0, width, height, fill: background.color || "#f4f1ea" }));
   drawShotSkybox(svg, width, height, sceneEnvironment().skybox);
-  drawShotFloor(svg, pose, width, height, topDown);
-  drawShotGrid(svg, pose, width, height, topDown);
-  drawShotEnvironmentObjects(svg, pose, width, height, topDown);
+  drawShotFloor(svg, pose, width, height, topDown, fovDegrees);
+  drawShotGrid(svg, pose, width, height, topDown, fovDegrees);
+  drawShotEnvironmentObjects(svg, pose, width, height, topDown, fovDegrees);
   const items = app.scene.characters.map((character, index) => {
     if (isCharacterHidden(character)) return null;
     const root = rootAt(character, app.currentTime);
-    const center = projectShot([root.position[0], root.position[1], root.position[2] + 0.8], pose, width, height, topDown);
+    const center = projectShot([root.position[0], root.position[1], root.position[2] + 0.8], pose, width, height, topDown, fovDegrees);
     return { character, index, root, depth: center?.scale || 0 };
   }).filter((item) => item && item.depth > 0).sort((a, b) => a.depth - b.depth);
-  for (const item of items) drawShotCharacter(svg, item.character, item.index, item.root, pose, width, height, topDown);
+  for (const item of items) drawShotCharacter(svg, item.character, item.index, item.root, pose, width, height, topDown, fovDegrees);
 }
 
 function shotSkyboxColors(preset) {
@@ -2182,10 +2200,10 @@ function drawShotSkybox(svg, width, height, preset) {
   svg.appendChild(makeSvg("rect", { x: 0, y: 0, width, height, fill: `url(#${id})` }));
 }
 
-function drawShotEnvironmentObjects(svg, pose, width, height, topDown) {
+function drawShotEnvironmentObjects(svg, pose, width, height, topDown, fovDegrees) {
   const objects = sceneEnvironment().objects || [];
   const drawOrder = objects.map((object) => {
-    const center = projectShot(object.position || [0, 0, 0], pose, width, height, topDown);
+    const center = projectShot(object.position || [0, 0, 0], pose, width, height, topDown, fovDegrees);
     return center ? { object, depth: center.scale, center } : null;
   }).filter(Boolean).sort((a, b) => a.depth - b.depth);
 
@@ -2226,7 +2244,7 @@ function drawShotEnvironmentObjects(svg, pose, width, height, topDown) {
   }
 }
 
-function drawShotGrid(svg, pose, width, height, topDown) {
+function drawShotGrid(svg, pose, width, height, topDown, fovDegrees) {
   if (!sceneBackground().show_grid) return;
   const { center, radius } = sceneCenterAndRadius();
   const extent = Math.ceil(radius + 1);
@@ -2236,14 +2254,14 @@ function drawShotGrid(svg, pose, width, height, topDown) {
       [[center[0] - extent, center[1] + i, 0], [center[0] + extent, center[1] + i, 0]],
     ];
     for (const [a, b] of lines) {
-      const pa = projectShot(a, pose, width, height, topDown);
-      const pb = projectShot(b, pose, width, height, topDown);
+      const pa = projectShot(a, pose, width, height, topDown, fovDegrees);
+      const pb = projectShot(b, pose, width, height, topDown, fovDegrees);
       if (pa && pb) svg.appendChild(makeSvg("line", { x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y, class: "shot-floor" }));
     }
   }
 }
 
-function drawShotFloor(svg, pose, width, height, topDown) {
+function drawShotFloor(svg, pose, width, height, topDown, fovDegrees) {
   if (!sceneBackground().show_floor) return;
   const { center, radius } = sceneCenterAndRadius();
   const extent = radius + 1.5;
@@ -2253,21 +2271,21 @@ function drawShotFloor(svg, pose, width, height, topDown) {
     [center[0] + extent, center[1] + extent, 0],
     [center[0] - extent, center[1] + extent, 0],
   ];
-  const projected = corners.map((point) => projectShot(point, pose, width, height, topDown));
+  const projected = corners.map((point) => projectShot(point, pose, width, height, topDown, fovDegrees));
   if (projected.some((point) => !point)) return;
   const points = projected.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
   svg.appendChild(makeSvg("polygon", { points, fill: "rgba(120, 123, 118, 0.12)" }));
 }
 
-function drawShotCharacter(svg, character, index, root, pose, width, height, topDown) {
-  if (drawShotBlockyCharacter(svg, character, index, root, pose, width, height, topDown)) return;
+function drawShotCharacter(svg, character, index, root, pose, width, height, topDown, fovDegrees) {
+  if (drawShotBlockyCharacter(svg, character, index, root, pose, width, height, topDown, fovDegrees)) return;
 
   const color = characterColor(character, index);
   const label = activeClipAt(character, app.currentTime)?.clip || "Idle Breathing";
   const skeleton = characterSkeleton(root.position, root.facing_degrees, label, app.currentTime);
   for (const [a, b] of skeleton.segments) {
-    const pa = projectShot(a, pose, width, height, topDown);
-    const pb = projectShot(b, pose, width, height, topDown);
+    const pa = projectShot(a, pose, width, height, topDown, fovDegrees);
+    const pb = projectShot(b, pose, width, height, topDown, fovDegrees);
     if (!pa || !pb) continue;
     svg.appendChild(makeSvg("line", {
       x1: pa.x,
@@ -2279,8 +2297,8 @@ function drawShotCharacter(svg, character, index, root, pose, width, height, top
       "stroke-linecap": "round",
     }));
   }
-  const chest = projectShot(skeleton.chest, pose, width, height, topDown);
-  const head = projectShot(skeleton.head, pose, width, height, topDown);
+  const chest = projectShot(skeleton.chest, pose, width, height, topDown, fovDegrees);
+  const head = projectShot(skeleton.head, pose, width, height, topDown, fovDegrees);
   if (chest) {
     const r = Math.max(4, 0.13 * chest.scale);
     svg.appendChild(makeSvg("ellipse", { cx: chest.x, cy: chest.y, rx: r, ry: r, class: "shot-character-body", stroke: color }));
@@ -2292,7 +2310,7 @@ function drawShotCharacter(svg, character, index, root, pose, width, height, top
   }
 }
 
-function drawShotBlockyCharacter(svg, character, index, root, pose, width, height, topDown) {
+function drawShotBlockyCharacter(svg, character, index, root, pose, width, height, topDown, fovDegrees) {
   const asset = app.proxyAssetPreviews[defaultProxyAsset()];
   if (!asset || !Array.isArray(asset.joints) || !Array.isArray(asset.parts)) return false;
   const clip = activeClipAt(character, app.currentTime);
@@ -2308,7 +2326,7 @@ function drawShotBlockyCharacter(svg, character, index, root, pose, width, heigh
       matVec(blockyPose.worldRotations[jointIndex], numericVec3(vertex)),
     ));
     for (const face of part.faces) {
-      const projected = face.slice(0, 3).map((vertexIndex) => projectShot(worldVertices[vertexIndex], pose, width, height, topDown));
+      const projected = face.slice(0, 3).map((vertexIndex) => projectShot(worldVertices[vertexIndex], pose, width, height, topDown, fovDegrees));
       if (projected.some((point) => !point)) continue;
       const points = projected.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
       const depth = projected.reduce((value, point) => value + point.scale, 0) / projected.length;
@@ -2327,7 +2345,7 @@ function drawShotBlockyCharacter(svg, character, index, root, pose, width, heigh
   }
   const headIndex = blockyPose.jointLookup.head;
   if (headIndex !== undefined) {
-    const head = projectShot(addVec(blockyPose.worldPositions[headIndex], [0, 0, 0.13]), pose, width, height, topDown);
+    const head = projectShot(addVec(blockyPose.worldPositions[headIndex], [0, 0, 0.13]), pose, width, height, topDown, fovDegrees);
     if (head) svg.appendChild(makeSvg("text", { x: head.x + 5, y: head.y + 4, class: "shot-label" }, [document.createTextNode(character.label)]));
   }
   return faces.length > 0;
@@ -3294,14 +3312,24 @@ function renderExportPanel() {
     ? `<div class="field"><label>Orbit radius (m)</label><input id="cameraOrbitRadius" type="number" min="0" step="0.1" value="${orbitRadiusValue}" placeholder="auto (${orbitRadiusPlaceholder})"></div>`
     : "";
   const staticPos = camera.static_position || [null, null, null];
+  const staticLook = camera.static_look_at || [null, null, null];
   const staticField = camera.preset === "wide_static"
     ? `<div class="field"><label>Static camera position (x, y, z)</label>
         <div class="export-grid">
           <input id="cameraStaticX" type="number" step="0.1" value="${staticPos[0] !== null && staticPos[0] !== undefined ? staticPos[0] : ""}" placeholder="x">
           <input id="cameraStaticY" type="number" step="0.1" value="${staticPos[1] !== null && staticPos[1] !== undefined ? staticPos[1] : ""}" placeholder="y">
           <input id="cameraStaticZ" type="number" step="0.1" value="${staticPos[2] !== null && staticPos[2] !== undefined ? staticPos[2] : ""}" placeholder="z">
+        </div></div>
+      <div class="field"><label>Static look-at target (x, y, z)</label>
+        <div class="export-grid">
+          <input id="cameraLookAtX" type="number" step="0.1" value="${staticLook[0] !== null && staticLook[0] !== undefined ? staticLook[0] : ""}" placeholder="x">
+          <input id="cameraLookAtY" type="number" step="0.1" value="${staticLook[1] !== null && staticLook[1] !== undefined ? staticLook[1] : ""}" placeholder="y">
+          <input id="cameraLookAtZ" type="number" step="0.1" value="${staticLook[2] !== null && staticLook[2] !== undefined ? staticLook[2] : ""}" placeholder="z">
         </div></div>`
     : "";
+  const fovValue = camera.fov !== null && camera.fov !== undefined ? camera.fov : "";
+  const fovPlaceholder = (camera.preset === "top_down" ? 38 : 45).toFixed(0);
+  const fovField = `<div class="field"><label>Field of view (deg)</label><input id="cameraFov" type="number" min="5" max="170" step="1" value="${fovValue}" placeholder="auto (${fovPlaceholder})"></div>`;
   panel.innerHTML = `
     <svg id="shotPreviewSvg" class="shot-preview" viewBox="0 0 360 203" aria-label="Camera shot preview"></svg>
     <div class="field"><label>Camera</label><select id="cameraPreset">${CAMERA_PRESETS.map(([value, label]) => `<option value="${value}" ${value === camera.preset ? "selected" : ""}>${label}</option>`).join("")}</select></div>
@@ -3309,6 +3337,7 @@ function renderExportPanel() {
     <div class="field"><label>Camera height</label><input id="cameraHeight" type="number" min="0.4" step="0.05" value="${camera.height}"></div>
     ${orbitField}
     ${staticField}
+    ${fovField}
     <div class="export-grid">
       <div class="field"><label>Width</label><input id="exportWidth" type="number" min="320" max="${FINAL_AVATAR_MAX_WIDTH}" step="2" value="${exportSettings.width}"></div>
       <div class="field"><label>Height</label><input id="exportHeight" type="number" min="180" max="${FINAL_AVATAR_MAX_HEIGHT}" step="2" value="${exportSettings.height}"></div>
@@ -3342,6 +3371,25 @@ function renderExportPanel() {
       renderAll();
     };
     staticInputs.forEach((input) => input.addEventListener("change", commitStatic));
+  }
+  const lookAtInputs = [$("#cameraLookAtX"), $("#cameraLookAtY"), $("#cameraLookAtZ")];
+  if (lookAtInputs.every((input) => input)) {
+    const commitLookAt = () => {
+      pushUndoSnapshot();
+      const values = lookAtInputs.map((input) => Number(input.value));
+      camera.static_look_at = values.every((value) => Number.isFinite(value)) ? values : null;
+      renderAll();
+    };
+    lookAtInputs.forEach((input) => input.addEventListener("change", commitLookAt));
+  }
+  const fovInput = $("#cameraFov");
+  if (fovInput) {
+    fovInput.addEventListener("change", (event) => {
+      pushUndoSnapshot();
+      const value = optionalPositiveFloat(event.target.value);
+      camera.fov = value === null ? null : Math.max(5, Math.min(170, value));
+      renderAll();
+    });
   }
   $("#exportFps").addEventListener("change", (event) => { pushUndoSnapshot(); exportSettings.fps = clamp(Number(event.target.value), 1, FINAL_AVATAR_MAX_FPS); renderAll(); });
   $("#exportWidth").addEventListener("change", (event) => { pushUndoSnapshot(); exportSettings.width = evenNumber(clamp(Number(event.target.value), 320, FINAL_AVATAR_MAX_WIDTH)); renderAll(); });

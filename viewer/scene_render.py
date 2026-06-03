@@ -340,6 +340,7 @@ def camera_pose(scene: dict[str, Any], scene_time: float) -> tuple[Vec3, Vec3]:
     target_look_at = camera_target_look_at(scene, camera, scene_time, height)
     orbit_radius = optional_positive_float(camera.get("orbit_radius"))
     static_position = optional_vec3(camera.get("static_position"))
+    static_look_at = optional_vec3(camera.get("static_look_at"))
     if preset == "front_stage":
         position = vec_add(look_at, (0.0, radius, height * 0.85))
     elif preset == "slow_orbit":
@@ -367,6 +368,8 @@ def camera_pose(scene: dict[str, Any], scene_time: float) -> tuple[Vec3, Vec3]:
             position = static_position
         else:
             position = vec_add(look_at, (0.45 * radius, 1.15 * radius, height * 0.95))
+        if static_look_at is not None:
+            look_at = static_look_at
     return position, look_at
 
 
@@ -391,6 +394,14 @@ def optional_vec3(value: Any) -> Vec3 | None:
         return None
 
 
+def effective_fov_radians(scene: dict[str, Any], top_down: bool) -> float:
+    camera = scene.get("camera", {}) if isinstance(scene, dict) else {}
+    fov_deg = optional_positive_float(camera.get("fov") if isinstance(camera, dict) else None)
+    if fov_deg is None:
+        fov_deg = 38.0 if top_down else 45.0
+    return math.radians(max(5.0, min(170.0, fov_deg)))
+
+
 def camera_target_look_at(scene: dict[str, Any], camera: dict[str, Any], scene_time: float, height: float) -> Vec3 | None:
     target_id = str(camera.get("target", ""))
     if target_id == CAMERA_ORIGIN_TARGET:
@@ -402,7 +413,7 @@ def camera_target_look_at(scene: dict[str, Any], camera: dict[str, Any], scene_t
     return (root[0], root[1], max(0.75, height * 0.72))
 
 
-def project_point(point: Vec3, camera_position: Vec3, look_at: Vec3, width: int, height: int, *, top_down: bool) -> tuple[float, float, float] | None:
+def project_point(point: Vec3, camera_position: Vec3, look_at: Vec3, width: int, height: int, *, top_down: bool, fov_radians: float | None = None) -> tuple[float, float, float] | None:
     forward = normalize(vec_sub(look_at, camera_position))
     world_up = (0.0, 0.0, 1.0)
     right = cross(forward, world_up)
@@ -415,8 +426,9 @@ def project_point(point: Vec3, camera_position: Vec3, look_at: Vec3, width: int,
     depth = dot(rel, forward)
     if depth <= 0.03:
         return None
-    fov = math.radians(38.0 if top_down else 45.0)
-    focal = 0.5 * height / math.tan(fov * 0.5)
+    if fov_radians is None:
+        fov_radians = math.radians(38.0 if top_down else 45.0)
+    focal = 0.5 * height / math.tan(fov_radians * 0.5)
     x = width * 0.5 + dot(rel, right) * focal / depth
     y = height * 0.54 - dot(rel, up) * focal / depth
     return x, y, focal / depth
@@ -433,6 +445,7 @@ def collect_projected_triangles(
     height: int,
     *,
     top_down: bool,
+    fov_radians: float | None = None,
 ) -> None:
     import numpy as np
 
@@ -444,6 +457,7 @@ def collect_projected_triangles(
             width,
             height,
             top_down=top_down,
+            fov_radians=fov_radians,
         )
         for point in np.asarray(vertices, dtype=np.float32)
     ]
@@ -468,6 +482,7 @@ def draw_floor_grid(
     height: int,
     *,
     top_down: bool,
+    fov_radians: float | None = None,
 ) -> None:
     background = scene.get("background", {})
     center, radius = scene_center_and_radius(scene)
@@ -479,7 +494,7 @@ def draw_floor_grid(
             (center[0] + extent, center[1] + extent, 0.0),
             (center[0] - extent, center[1] + extent, 0.0),
         ]
-        projected = [project_point(point, camera_position, look_at, width, height, top_down=top_down) for point in corners]
+        projected = [project_point(point, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians) for point in corners]
         if all(projected):
             assert projected[0] is not None and projected[1] is not None and projected[2] is not None and projected[3] is not None
             draw.polygon([(point[0], point[1]) for point in projected], fill=(120, 123, 118, 24))
@@ -491,8 +506,8 @@ def draw_floor_grid(
             ((index, -grid_extent, 0.0), (index, grid_extent, 0.0)),
             ((-grid_extent, index, 0.0), (grid_extent, index, 0.0)),
         ):
-            pa = project_point((a[0] + center[0], a[1] + center[1], a[2]), camera_position, look_at, width, height, top_down=top_down)
-            pb = project_point((b[0] + center[0], b[1] + center[1], b[2]), camera_position, look_at, width, height, top_down=top_down)
+            pa = project_point((a[0] + center[0], a[1] + center[1], a[2]), camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
+            pb = project_point((b[0] + center[0], b[1] + center[1], b[2]), camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
             if pa and pb:
                 draw.line((pa[0], pa[1], pb[0], pb[1]), fill=(36, 43, 45, 38), width=1)
 
@@ -537,23 +552,24 @@ def draw_environment_objects(
     height: int,
     *,
     top_down: bool,
+    fov_radians: float | None = None,
 ) -> None:
     objects = normalized_environment_objects(scene)
     if not objects:
         return
     draw_items: list[tuple[float, dict[str, Any]]] = []
     for obj in objects:
-        center = project_point(obj["position"], camera_position, look_at, width, height, top_down=top_down)
+        center = project_point(obj["position"], camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
         if center is None:
             continue
         draw_items.append((center[2], obj))
     for _, obj in sorted(draw_items, key=lambda item: item[0]):
         if obj["type"] == "box":
-            draw_environment_box(draw, obj, camera_position, look_at, width, height, top_down=top_down)
+            draw_environment_box(draw, obj, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
         elif obj["type"] == "sphere":
-            draw_environment_sphere(draw, obj, camera_position, look_at, width, height, top_down=top_down)
+            draw_environment_sphere(draw, obj, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
         else:
-            draw_environment_capsule(draw, obj, camera_position, look_at, width, height, top_down=top_down)
+            draw_environment_capsule(draw, obj, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
 
 
 def rotate_xy(x: float, y: float, angle_radians: float) -> tuple[float, float]:
@@ -571,6 +587,7 @@ def draw_environment_box(
     height: int,
     *,
     top_down: bool,
+    fov_radians: float | None = None,
 ) -> None:
     center = obj["position"]
     size = obj["size"]
@@ -592,7 +609,7 @@ def draw_environment_box(
         rx, ry = rotate_xy(vx, vy, angle)
         world_vertices.append((center[0] + rx, center[1] + ry, center[2] + vz))
 
-    projected = [project_point(vertex, camera_position, look_at, width, height, top_down=top_down) for vertex in world_vertices]
+    projected = [project_point(vertex, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians) for vertex in world_vertices]
     faces = [
         ([0, 1, 2, 3], 0.7),
         ([4, 5, 6, 7], 1.0),
@@ -627,13 +644,14 @@ def draw_environment_sphere(
     height: int,
     *,
     top_down: bool,
+    fov_radians: float | None = None,
 ) -> None:
     center = obj["position"]
     size = obj["size"]
     color = obj["color"]
     radius = max(0.05, max(size[0], size[1], size[2]) * 0.5)
-    projected_center = project_point(center, camera_position, look_at, width, height, top_down=top_down)
-    projected_edge = project_point((center[0] + radius, center[1], center[2]), camera_position, look_at, width, height, top_down=top_down)
+    projected_center = project_point(center, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
+    projected_edge = project_point((center[0] + radius, center[1], center[2]), camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
     if projected_center is None or projected_edge is None:
         return
     px_radius = max(1.0, abs(projected_edge[0] - projected_center[0]))
@@ -660,6 +678,7 @@ def draw_environment_capsule(
     height: int,
     *,
     top_down: bool,
+    fov_radians: float | None = None,
 ) -> None:
     center = obj["position"]
     size = obj["size"]
@@ -669,10 +688,10 @@ def draw_environment_capsule(
     bottom = (center[0], center[1], center[2] - half_segment)
     top = (center[0], center[1], center[2] + half_segment)
     right = (center[0] + radius, center[1], center[2])
-    p_bottom = project_point(bottom, camera_position, look_at, width, height, top_down=top_down)
-    p_top = project_point(top, camera_position, look_at, width, height, top_down=top_down)
-    p_right = project_point(right, camera_position, look_at, width, height, top_down=top_down)
-    p_center = project_point(center, camera_position, look_at, width, height, top_down=top_down)
+    p_bottom = project_point(bottom, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
+    p_top = project_point(top, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
+    p_right = project_point(right, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
+    p_center = project_point(center, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
     if p_bottom is None or p_top is None or p_right is None or p_center is None:
         return
     px_radius = max(1.0, abs(p_right[0] - p_center[0]))
@@ -802,6 +821,7 @@ def draw_proxy_asset_characters(
     width: int,
     height: int,
     top_down: bool,
+    fov_radians: float | None = None,
 ) -> None:
     import numpy as np
 
@@ -842,6 +862,7 @@ def draw_proxy_asset_characters(
                 width,
                 height,
                 top_down=top_down,
+                fov_radians=fov_radians,
             )
 
     for _, coords, color in sorted(triangles, key=lambda item: item[0]):
@@ -863,8 +884,9 @@ def render_scene_frame(
     draw = ImageDraw.Draw(image, "RGBA")
     camera_position, look_at = camera_pose(scene, scene_time)
     top_down = str(scene.get("camera", {}).get("preset", "")) == "top_down"
-    draw_floor_grid(draw, scene, camera_position, look_at, width, height, top_down=top_down)
-    draw_environment_objects(draw, scene, camera_position, look_at, width, height, top_down=top_down)
+    fov_radians = effective_fov_radians(scene, top_down)
+    draw_floor_grid(draw, scene, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
+    draw_environment_objects(draw, scene, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
 
     if proxy_context is not None:
         draw_proxy_asset_characters(
@@ -877,13 +899,14 @@ def render_scene_frame(
             width,
             height,
             top_down,
+            fov_radians=fov_radians,
         )
         return image
 
     draw_items: list[tuple[float, int, dict[str, Any], Vec3, float]] = []
     for index, character in enumerate(scene.get("characters", [])):
         root, facing = root_at(character, scene_time)
-        projected = project_point((root[0], root[1], root[2] + 0.8), camera_position, look_at, width, height, top_down=top_down)
+        projected = project_point((root[0], root[1], root[2] + 0.8), camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
         if projected:
             draw_items.append((projected[2], index, character, root, facing))
     draw_items.sort(key=lambda item: item[0])
@@ -893,14 +916,14 @@ def render_scene_frame(
         color = parse_hex_color(str(character.get("color", "")), fallback)
         segments, head, chest = character_segments_at(character, root, facing, scene_time)
         for first, second in segments:
-            pa = project_point(first, camera_position, look_at, width, height, top_down=top_down)
-            pb = project_point(second, camera_position, look_at, width, height, top_down=top_down)
+            pa = project_point(first, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
+            pb = project_point(second, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
             if not pa or not pb:
                 continue
             line_width = max(3, int(0.045 * (pa[2] + pb[2]) * 0.5))
             draw.line((pa[0], pa[1], pb[0], pb[1]), fill=(*color, 230), width=line_width)
-        head_p = project_point(head, camera_position, look_at, width, height, top_down=top_down)
-        chest_p = project_point(chest, camera_position, look_at, width, height, top_down=top_down)
+        head_p = project_point(head, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
+        chest_p = project_point(chest, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
         if chest_p:
             body_r = max(5, int(0.13 * chest_p[2]))
             draw.ellipse((chest_p[0] - body_r, chest_p[1] - body_r, chest_p[0] + body_r, chest_p[1] + body_r), fill=(255, 255, 255, 225), outline=(*color, 255), width=2)
@@ -1330,7 +1353,7 @@ class OffscreenAvatarRenderer:
 
         camera_position, look_at = camera_pose(scene_payload, scene_time)
         top_down = str(scene_payload.get("camera", {}).get("preset", "")) == "top_down"
-        fov = math.radians(38.0 if top_down else 45.0)
+        fov = effective_fov_radians(scene_payload, top_down)
         focal = 0.5 * self.height / math.tan(fov * 0.5)
         _, radius = scene_center_and_radius(scene_payload)
         camera = self.pyrender.IntrinsicsCamera(
@@ -1432,8 +1455,9 @@ def export_avatar_scene_video(
             draw = ImageDraw.Draw(image, "RGBA")
             camera_position, look_at = camera_pose(scene, scene_time)
             top_down = str(scene.get("camera", {}).get("preset", "")) == "top_down"
-            draw_floor_grid(draw, scene, camera_position, look_at, width, height, top_down=top_down)
-            draw_environment_objects(draw, scene, camera_position, look_at, width, height, top_down=top_down)
+            fov_radians = effective_fov_radians(scene, top_down)
+            draw_floor_grid(draw, scene, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
+            draw_environment_objects(draw, scene, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
 
             render_meshes: list[tuple[Any, Any, Any]] = []
             for character in motion_scene.characters:
@@ -1441,7 +1465,7 @@ def export_avatar_scene_video(
                 if sample is None:
                     continue
                 pose_sample, stage_root, facing_degrees = sample
-                draw_avatar_contact_shadow(draw, scene, scene_time, stage_root, width, height)
+                draw_avatar_contact_shadow(draw, scene, scene_time, stage_root, width, height, fov_radians=fov_radians)
                 asset = avatar_cache[character.character_id]
                 local_rotations = pose_sample_to_asset_local_rotations(asset, pose_sample)
                 world_rotations, world_positions = transform_world_pose(
@@ -1482,16 +1506,20 @@ def export_avatar_scene_video(
     return path
 
 
-def draw_avatar_floor(draw: Any, scene: dict[str, Any], scene_time: float, width: int, height: int) -> None:
+def draw_avatar_floor(draw: Any, scene: dict[str, Any], scene_time: float, width: int, height: int, *, fov_radians: float | None = None) -> None:
     camera_position, look_at = camera_pose(scene, scene_time)
     top_down = str(scene.get("camera", {}).get("preset", "")) == "top_down"
-    draw_floor_grid(draw, scene, camera_position, look_at, width, height, top_down=top_down)
+    if fov_radians is None:
+        fov_radians = effective_fov_radians(scene, top_down)
+    draw_floor_grid(draw, scene, camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
 
 
-def draw_avatar_contact_shadow(draw: Any, scene: dict[str, Any], scene_time: float, root: Vec3, width: int, height: int) -> None:
+def draw_avatar_contact_shadow(draw: Any, scene: dict[str, Any], scene_time: float, root: Vec3, width: int, height: int, *, fov_radians: float | None = None) -> None:
     camera_position, look_at = camera_pose(scene, scene_time)
     top_down = str(scene.get("camera", {}).get("preset", "")) == "top_down"
-    point = project_point((float(root[0]), float(root[1]), 0.018), camera_position, look_at, width, height, top_down=top_down)
+    if fov_radians is None:
+        fov_radians = effective_fov_radians(scene, top_down)
+    point = project_point((float(root[0]), float(root[1]), 0.018), camera_position, look_at, width, height, top_down=top_down, fov_radians=fov_radians)
     if point is None:
         return
     x, y, scale = point
