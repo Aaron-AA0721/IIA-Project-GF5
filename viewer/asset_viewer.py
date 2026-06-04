@@ -152,6 +152,8 @@ class ViewerState:
     last_track_timeline_render_time: float | None = None
     working_sequence_play_start_time_sec: float | None = None
     working_sequence_play_start_wall_time: float | None = None
+    frame_clipboard: list[dict[str, Any]] | None = None
+    frame_clipboard_source_time: float | None = None
     last_export_path: Path | None = None
     is_loading_asset: bool = False
     is_exporting_video: bool = False
@@ -1775,6 +1777,8 @@ def main() -> None:
         capture_pose_button = server.gui.add_button("Add Pose To Sequence")
         load_motion_sequence_button = server.gui.add_button("Load Motion Into Sequence")
         remove_keyframe_button = server.gui.add_button("Remove Keyframe", disabled=True)
+        copy_frame_button = server.gui.add_button("Copy Frame (All Tracks)")
+        paste_frame_button = server.gui.add_button("Paste Frame (All Tracks)", disabled=True)
         range_delete_start_button = server.gui.add_button("Mark Range Start")
         range_delete_end_button = server.gui.add_button("Mark Range End")
         delete_range_button = server.gui.add_button("Delete Range", disabled=True)
@@ -2359,19 +2363,23 @@ def main() -> None:
         state.working_sequence_source_name = source_name
         update_sequence_save_controls()
 
+    def minimum_required_timeline_length() -> float:
+        latest_keyframe_time = (
+            max(float(keyframe["time_sec"]) for keyframe in state.keyframes)
+            if state.keyframes
+            else 0.0
+        )
+        return max(1.0, math.ceil(latest_keyframe_time * 2.0) / 2.0) if state.keyframes else 1.0
+
     def update_timeline_controls() -> None:
         latest_keyframe_time = (
             max(float(keyframe["time_sec"]) for keyframe in state.keyframes)
             if state.keyframes
             else 0.0
         )
-        if clip_dropdown.value == WORKING_SEQUENCE_LABEL:
-            if state.keyframes:
-                desired_length = max(1.0, math.ceil(latest_keyframe_time * 2.0) / 2.0)
-            else:
-                desired_length = DEFAULT_WORKING_SEQUENCE_DURATION
-            if abs(float(timeline_length_slider.value) - desired_length) > 1e-6:
-                sync_timeline_length_control(desired_length)
+        minimum_length = minimum_required_timeline_length()
+        if float(timeline_length_slider.value) < minimum_length - 1e-6:
+            sync_timeline_length_control(minimum_length)
         elif latest_keyframe_time > float(timeline_length_slider.value):
             sync_timeline_length_control(math.ceil(latest_keyframe_time * 2.0) / 2.0)
 
@@ -3093,6 +3101,49 @@ def main() -> None:
         invalidate_working_sequence_track_cache()
         return state.keyframes.pop(keyframe_index)
 
+    def copy_frame_at_current_time() -> None:
+        current_time = current_timeline_time()
+        matches = [
+            copy.deepcopy(keyframe)
+            for keyframe in (state.keyframes or [])
+            if abs(float(keyframe["time_sec"]) - current_time) < 1e-4
+        ]
+        if not matches:
+            set_markdown_status(
+                timeline_status_text,
+                "Working Sequence",
+                f"No keyframes to copy at {current_time:.2f}s",
+            )
+            return
+        state.frame_clipboard = matches
+        state.frame_clipboard_source_time = current_time
+        paste_frame_button.disabled = False
+        set_markdown_status(
+            timeline_status_text,
+            "Working Sequence",
+            f"Copied {len(matches)} keyframes from {current_time:.2f}s",
+        )
+
+    def paste_frame_at_current_time() -> None:
+        if not state.frame_clipboard:
+            set_markdown_status(timeline_status_text, "Working Sequence", "Clipboard is empty")
+            return
+        target_time = current_timeline_time()
+        for keyframe in state.frame_clipboard:
+            new_keyframe = copy.deepcopy(keyframe)
+            new_keyframe["time_sec"] = round(float(target_time), 6)
+            upsert_keyframe(new_keyframe)
+        if target_time > float(timeline_length_slider.value):
+            sync_timeline_length_control(math.ceil(max(1.0, target_time) * 2.0) / 2.0)
+        set_markdown_status(
+            timeline_status_text,
+            "Working Sequence",
+            f"Pasted {len(state.frame_clipboard)} keyframes at {target_time:.2f}s",
+        )
+        update_keyframe_status()
+        update_timeline_controls()
+        preview_timeline_time(target_time)
+
     def load_saved_pose_payload(path: Path) -> dict[str, Any]:
         payload = json.loads(path.read_text(encoding="utf-8"))
         if payload.get("format") != "gf5_saved_pose":
@@ -3665,7 +3716,17 @@ def main() -> None:
     def _(_: Any) -> None:
         if state.is_loading_asset or state.suppress_timeline_end_callbacks:
             return
-        sync_timeline_length_control(timeline_length_slider.value)
+        requested_length = float(timeline_length_slider.value)
+        minimum_length = minimum_required_timeline_length()
+        if requested_length < minimum_length - 1e-6:
+            sync_timeline_length_control(minimum_length)
+            set_markdown_status(
+                timeline_status_text,
+                "Working Sequence",
+                f"Cannot shorten below {minimum_length:.2f}s; remove later keyframes first",
+            )
+        else:
+            sync_timeline_length_control(requested_length)
         sync_timeline_time_controls(timeline_time_slider.value)
         update_timeline_controls()
         preview_timeline_time(timeline_time_slider.value)
@@ -3948,6 +4009,14 @@ def main() -> None:
         update_keyframe_status()
         update_timeline_controls()
         preview_timeline_time(current_time)
+
+    @copy_frame_button.on_click
+    def _(_: Any) -> None:
+        copy_frame_at_current_time()
+
+    @paste_frame_button.on_click
+    def _(_: Any) -> None:
+        paste_frame_at_current_time()
 
     @clear_keyframes_button.on_click
     def _(_: Any) -> None:
