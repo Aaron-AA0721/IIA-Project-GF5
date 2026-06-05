@@ -1,7 +1,7 @@
 {
   "format": "gf5_motion_scene",
   "version": 3,
-  "duration": 12.0,
+  "duration": 36.5,
   "background": {
     "color": "#f4f1ea",
     "image_path": "",
@@ -13,13 +13,21 @@
     "objects": []
   },
   "camera": {
-    "preset": "slow_orbit",
-    "target": "__origin__",
+    "preset": "wide_static",
+    "target": "character_4",
     "height": 1.45,
     "orbit_radius": null,
-    "static_position": null,
-    "static_look_at": null,
-    "fov": null
+    "static_position": [
+      4.0,
+      0.5,
+      1.5
+    ],
+    "static_look_at": [
+      0.0,
+      0.5,
+      0.9
+    ],
+    "fov": 45.0
   },
   "export": {
     "fps": 24,
@@ -28,55 +36,15 @@
   },
   "characters": [
     {
-      "id": "host",
-      "label": "Host",
-      "color": "#2f7f7b",
+      "id": "character_2",
+      "label": "Avatar 2",
+      "color": "#2f9b72",
       "proxy_asset": "SMPL-24 Proxy",
       "avatar_asset": "E:\\00_Camb\\GF5__\\IIA-Project-GF5\\libraries\\avatars\\Aaron",
       "track": [
         {
-          "clip": "Preset: Idle stand",
+          "clip": "Custom: HY-Motion: a person dodging during a boxing match to avoid being hit (3)",
           "start": 0.0,
-          "duration": 1.0,
-          "trim_start": 0.0,
-          "trim_end": null,
-          "root_mode": "path",
-          "blend_in": 0.3,
-          "blend_out": 0.3
-        },
-        {
-          "clip": "Preset: Start walking",
-          "start": 1.0,
-          "duration": 1.2,
-          "trim_start": 0.0,
-          "trim_end": null,
-          "root_mode": "path",
-          "blend_in": 0.36,
-          "blend_out": 0.36
-        },
-        {
-          "clip": "Preset: Walk cycle",
-          "start": 2.2,
-          "duration": 2.7,
-          "trim_start": 0.0,
-          "trim_end": null,
-          "root_mode": "path",
-          "blend_in": 0.45,
-          "blend_out": 0.45
-        },
-        {
-          "clip": "Preset: Stop walking",
-          "start": 4.9,
-          "duration": 1.2,
-          "trim_start": 0.0,
-          "trim_end": null,
-          "root_mode": "path",
-          "blend_in": 0.36,
-          "blend_out": 0.36
-        },
-        {
-          "clip": "Preset: Present to side",
-          "start": 6.3,
           "duration": 2.0,
           "trim_start": 0.0,
           "trim_end": null,
@@ -85,9 +53,487 @@
           "blend_out": 0.45
         },
         {
+          "clip": "Custom: HY-Motion: a person dodging during a boxing match to avoid being hit (4)",
+          "start": 2.0,
+          "duration": 2.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: HY-Motion: a person dodging during a boxing match to avoid being hit (3)",
+          "start": 4.0,
+          "duration": 2.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: HY-Motion: Two person boxing_2(modified)",
+          "start": 6.0,
+          "duration": 2.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: HY-Motion: Two person boxing_2(modified)",
+          "start": 9.0,
+          "duration": 1.4,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: dodge_movebackward",
+          "start": 10.4,
+          "duration": 2.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: dodge_movebackward",
+          "start": 12.4,
+          "duration": 2.4,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: HY-Motion: The individual performs a powerful forward straight punch with their right arm. After impact, he quickly retracts the punching arm back and perform defensive state in boxing match (2)",
+          "start": 14.8,
+          "duration": 1.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: HY-Motion: a boxer wins and raise arms and jump to celebrate",
+          "start": 20.1,
+          "duration": 4.833333,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Preset: Idle stand",
+          "start": 25.5,
+          "duration": 2.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Preset: Idle stand",
+          "start": 28.5,
+          "duration": 2.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Preset: Bow",
+          "start": 32.9,
+          "duration": 2.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        }
+      ],
+      "root_keys": [
+        {
+          "id": "k0",
+          "time": 6.0,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "facing_degrees": 0.0
+        },
+        {
+          "id": "k2",
+          "time": 10.4,
+          "position": [
+            0.0,
+            2.0,
+            0.0
+          ],
+          "facing_degrees": 0.0
+        },
+        {
+          "id": "k1",
+          "time": 14.8,
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "facing_degrees": 0.0
+        }
+      ],
+      "root_segments": [
+        {
+          "from": "k0",
+          "to": "k2",
+          "mode": "curve",
+          "facing": "manual"
+        },
+        {
+          "from": "k2",
+          "to": "k1",
+          "mode": "curve",
+          "facing": "manual"
+        }
+      ]
+    },
+    {
+      "id": "character_3",
+      "label": "Avatar 3",
+      "color": "#d6a72f",
+      "proxy_asset": "SMPL-24 Proxy",
+      "avatar_asset": "E:\\00_Camb\\GF5__\\IIA-Project-GF5\\libraries\\avatars\\Aaron",
+      "track": [
+        {
+          "clip": "Custom: HY-Motion: a person dodging during a boxing match to avoid being hit (4)",
+          "start": 0.0,
+          "duration": 2.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: HY-Motion: a person dodging during a boxing match to avoid being hit (4)",
+          "start": 2.0,
+          "duration": 2.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: HY-Motion: a person dodging during a boxing match to avoid being hit (4)",
+          "start": 4.0,
+          "duration": 2.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: dodge_movebackward",
+          "start": 6.0,
+          "duration": 2.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: dodge_movebackward",
+          "start": 8.0,
+          "duration": 2.4,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: HY-Motion: Two person boxing_2(modified)",
+          "start": 10.4,
+          "duration": 2.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: HY-Motion: Two person boxing_2(modified)",
+          "start": 13.4,
+          "duration": 1.4,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: Knockdown",
+          "start": 15.5,
+          "duration": 10.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: get up_3",
+          "start": 25.5,
+          "duration": 7.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Preset: Bow",
+          "start": 32.9,
+          "duration": 2.6,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        }
+      ],
+      "root_keys": [
+        {
+          "id": "k0",
+          "time": 6.0,
+          "position": [
+            0.0,
+            1.25,
+            0.0
+          ],
+          "facing_degrees": 180.0
+        },
+        {
+          "id": "k1",
+          "time": 10.4,
+          "position": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "facing_degrees": 180.0
+        },
+        {
+          "id": "k2",
+          "time": 14.8,
+          "position": [
+            0.0,
+            0.8,
+            0.0
+          ],
+          "facing_degrees": 180.0
+        },
+        {
+          "id": "k3",
+          "time": 16.0,
+          "position": [
+            0.0,
+            0.8,
+            0.0
+          ],
+          "facing_degrees": 180.0
+        },
+        {
+          "id": "k4",
+          "time": 16.5,
+          "position": [
+            0.0,
+            1.5,
+            0.0
+          ],
+          "facing_degrees": 180.0
+        },
+        {
+          "id": "k5",
+          "time": 24.988888888888887,
+          "position": [
+            0.0,
+            1.5,
+            0.0
+          ],
+          "facing_degrees": 180.0
+        },
+        {
+          "id": "k6",
+          "time": 26.02592502170139,
+          "position": [
+            0.0,
+            1.5,
+            0.0
+          ],
+          "facing_degrees": 30.0
+        },
+        {
+          "id": "k7",
+          "time": 32.04814995659722,
+          "position": [
+            0.0,
+            1.5,
+            0.0
+          ],
+          "facing_degrees": 30.0
+        },
+        {
+          "id": "k8",
+          "time": 33.025927734375,
+          "position": [
+            0.0,
+            1.5,
+            0.0
+          ],
+          "facing_degrees": 180.0
+        }
+      ],
+      "root_segments": [
+        {
+          "from": "k0",
+          "to": "k1",
+          "mode": "curve",
+          "facing": "manual"
+        },
+        {
+          "from": "k1",
+          "to": "k2",
+          "mode": "curve",
+          "facing": "manual"
+        },
+        {
+          "from": "k2",
+          "to": "k3",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k3",
+          "to": "k4",
+          "mode": "curve",
+          "facing": "manual"
+        },
+        {
+          "from": "k4",
+          "to": "k5",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k5",
+          "to": "k6",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k6",
+          "to": "k7",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k7",
+          "to": "k8",
+          "mode": "linear",
+          "facing": "manual"
+        }
+      ]
+    },
+    {
+      "id": "character_4",
+      "label": "Avatar 4",
+      "color": "#c04848",
+      "proxy_asset": "SMPL-24 Proxy",
+      "avatar_asset": "E:\\00_Camb\\GF5__\\IIA-Project-GF5\\libraries\\avatars\\Aaron",
+      "track": [
+        {
+          "clip": "Custom: start_match_3",
+          "start": 0.0,
+          "duration": 6.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Preset: Point forward",
+          "start": 16.9,
+          "duration": 2.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
           "clip": "Preset: Right-hand wave",
-          "start": 8.8,
-          "duration": 2.2,
+          "start": 19.9,
+          "duration": 2.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        }
+      ],
+      "root_keys": [
+        {
+          "id": "k0",
+          "time": 0.0,
+          "position": [
+            -0.75,
+            0.7,
+            0.0
+          ],
+          "facing_degrees": 95.0
+        }
+      ],
+      "root_segments": []
+    },
+    {
+      "id": "character_5",
+      "label": "Avatar 5",
+      "color": "#5d8749",
+      "proxy_asset": "SMPL-24 Proxy",
+      "avatar_asset": "E:\\00_Camb\\GF5__\\IIA-Project-GF5\\libraries\\avatars\\Aaron",
+      "track": [
+        {
+          "clip": "Custom: HY-Motion: The spectator throws both arms upward and bouncing on their feet  bouncing on the feet, leaning the upper body backward with head tilted up, to celebrate the victory of their favored winner",
+          "start": 20.1,
+          "duration": 5.7,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: HY-Motion: The spectator throws both arms upward and bouncing on their feet  bouncing on the feet, leaning the upper body backward with head tilted up, to celebrate the victory of their favored winner",
+          "start": 25.8,
+          "duration": 5.7,
           "trim_start": 0.0,
           "trim_end": null,
           "root_mode": "path",
@@ -101,235 +547,35 @@
           "time": 0.0,
           "position": [
             -2.0,
-            -0.45,
+            -1.0,
             0.0
           ],
-          "facing_degrees": 76.0
-        },
-        {
-          "id": "k1",
-          "time": 2.2,
-          "position": [
-            -1.25,
-            -0.38,
-            0.0
-          ],
-          "facing_degrees": 78.0
-        },
-        {
-          "id": "k2",
-          "time": 5.8,
-          "position": [
-            -0.35,
-            -0.22,
-            0.0
-          ],
-          "facing_degrees": 64.0
-        },
-        {
-          "id": "k3",
-          "time": 12.0,
-          "position": [
-            -0.35,
-            -0.22,
-            0.0
-          ],
-          "facing_degrees": 36.0
+          "facing_degrees": 45.0
         }
       ],
-      "root_segments": [
-        {
-          "from": "k0",
-          "to": "k1",
-          "mode": "linear",
-          "facing": "manual"
-        },
-        {
-          "from": "k1",
-          "to": "k2",
-          "mode": "curve",
-          "facing": "manual"
-        },
-        {
-          "from": "k2",
-          "to": "k3",
-          "mode": "hold",
-          "facing": "manual"
-        }
-      ]
+      "root_segments": []
     },
     {
-      "id": "guest",
-      "label": "Guest",
-      "color": "#3f7db8",
+      "id": "character_6",
+      "label": "Avatar 6",
+      "color": "#2f7f7b",
       "proxy_asset": "SMPL-24 Proxy",
       "avatar_asset": "E:\\00_Camb\\GF5__\\IIA-Project-GF5\\libraries\\avatars\\Aaron",
       "track": [
-        {
-          "clip": "Preset: Idle stand",
-          "start": 0.0,
-          "duration": 1.4,
-          "trim_start": 0.0,
-          "trim_end": null,
-          "root_mode": "path",
-          "blend_in": 0.42,
-          "blend_out": 0.42
-        },
-        {
-          "clip": "Preset: Start walking",
-          "start": 1.4,
-          "duration": 1.2,
-          "trim_start": 0.0,
-          "trim_end": null,
-          "root_mode": "path",
-          "blend_in": 0.36,
-          "blend_out": 0.36
-        },
-        {
-          "clip": "Preset: Walk cycle",
-          "start": 2.6,
-          "duration": 2.4,
-          "trim_start": 0.0,
-          "trim_end": null,
-          "root_mode": "path",
-          "blend_in": 0.45,
-          "blend_out": 0.45
-        },
-        {
-          "clip": "Preset: Stop walking",
-          "start": 5.0,
-          "duration": 1.2,
-          "trim_start": 0.0,
-          "trim_end": null,
-          "root_mode": "path",
-          "blend_in": 0.36,
-          "blend_out": 0.36
-        },
-        {
-          "clip": "Preset: Clap twice",
-          "start": 7.0,
-          "duration": 1.8,
-          "trim_start": 0.0,
-          "trim_end": null,
-          "root_mode": "path",
-          "blend_in": 0.45,
-          "blend_out": 0.45
-        },
-        {
-          "clip": "Preset: Bow",
-          "start": 9.2,
-          "duration": 2.0,
-          "trim_start": 0.0,
-          "trim_end": null,
-          "root_mode": "path",
-          "blend_in": 0.45,
-          "blend_out": 0.45
-        }
-      ],
-      "root_keys": [
-        {
-          "id": "k0",
-          "time": 0.0,
-          "position": [
-            2.0,
-            0.55,
-            0.0
-          ],
-          "facing_degrees": -112.0
-        },
-        {
-          "id": "k1",
-          "time": 2.6,
-          "position": [
-            1.25,
-            0.36,
-            0.0
-          ],
-          "facing_degrees": -112.0
-        },
-        {
-          "id": "k2",
-          "time": 5.8,
-          "position": [
-            0.55,
-            0.06,
-            0.0
-          ],
-          "facing_degrees": -128.0
-        },
-        {
-          "id": "k3",
-          "time": 12.0,
-          "position": [
-            0.55,
-            0.06,
-            0.0
-          ],
-          "facing_degrees": -54.0
-        }
-      ],
-      "root_segments": [
-        {
-          "from": "k0",
-          "to": "k1",
-          "mode": "linear",
-          "facing": "manual"
-        },
-        {
-          "from": "k1",
-          "to": "k2",
-          "mode": "curve",
-          "facing": "manual"
-        },
-        {
-          "from": "k2",
-          "to": "k3",
-          "mode": "hold",
-          "facing": "manual"
-        }
-      ]
-    },
-    {
-      "id": "observer",
-      "label": "Observer",
-      "color": "#d6a72f",
-      "proxy_asset": "SMPL-24 Proxy",
-      "avatar_asset": "E:\\00_Camb\\GF5__\\IIA-Project-GF5\\libraries\\avatars\\Aaron",
-      "track": [
-        {
-          "clip": "Preset: Idle stand",
-          "start": 0.0,
-          "duration": 1.8,
-          "trim_start": 0.0,
-          "trim_end": null,
-          "root_mode": "path",
-          "blend_in": 0.45,
-          "blend_out": 0.45
-        },
-        {
-          "clip": "Preset: Look around",
-          "start": 1.8,
-          "duration": 3.0,
-          "trim_start": 0.0,
-          "trim_end": null,
-          "root_mode": "path",
-          "blend_in": 0.45,
-          "blend_out": 0.45
-        },
-        {
-          "clip": "Preset: Clap twice",
-          "start": 5.4,
-          "duration": 1.8,
-          "trim_start": 0.0,
-          "trim_end": null,
-          "root_mode": "path",
-          "blend_in": 0.45,
-          "blend_out": 0.45
-        },
         {
           "clip": "Preset: Celebrate",
-          "start": 8.0,
-          "duration": 2.4,
+          "start": 20.5,
+          "duration": 3.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: HY-Motion: The spectator throws both arms upward and bouncing on their feet  bouncing on the feet, leaning the upper body backward with head tilted up, to celebrate the victory of their favored winner (3)",
+          "start": 24.5,
+          "duration": 5.7,
           "trim_start": 0.0,
           "trim_end": null,
           "root_mode": "path",
@@ -342,63 +588,76 @@
           "id": "k0",
           "time": 0.0,
           "position": [
-            -0.15,
-            1.05,
+            -2.0,
+            2.0,
             0.0
           ],
-          "facing_degrees": 178.0
-        },
-        {
-          "id": "k1",
-          "time": 4.5,
-          "position": [
-            -0.15,
-            1.05,
-            0.0
-          ],
-          "facing_degrees": 154.0
-        },
-        {
-          "id": "k2",
-          "time": 8.0,
-          "position": [
-            -0.05,
-            0.96,
-            0.0
-          ],
-          "facing_degrees": 145.0
-        },
-        {
-          "id": "k3",
-          "time": 12.0,
-          "position": [
-            0.05,
-            0.92,
-            0.0
-          ],
-          "facing_degrees": 142.0
+          "facing_degrees": 135.0
         }
       ],
-      "root_segments": [
+      "root_segments": []
+    },
+    {
+      "id": "character_7",
+      "label": "Avatar 7",
+      "color": "#2f91c2",
+      "proxy_asset": "SMPL-24 Proxy",
+      "avatar_asset": "E:\\00_Camb\\GF5__\\IIA-Project-GF5\\libraries\\avatars\\Aaron",
+      "track": [
         {
-          "from": "k0",
-          "to": "k1",
-          "mode": "hold",
-          "facing": "manual"
+          "clip": "Preset: Look around",
+          "start": 1.4,
+          "duration": 2.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
         },
         {
-          "from": "k1",
-          "to": "k2",
-          "mode": "linear",
-          "facing": "manual"
+          "clip": "Preset: Dance arm swing",
+          "start": 10.4,
+          "duration": 3.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
         },
         {
-          "from": "k2",
-          "to": "k3",
-          "mode": "hold",
-          "facing": "manual"
+          "clip": "Preset: Clap twice",
+          "start": 20.0,
+          "duration": 2.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Preset: Clap twice",
+          "start": 23.0,
+          "duration": 2.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
         }
-      ]
+      ],
+      "root_keys": [
+        {
+          "id": "k0",
+          "time": 0.0,
+          "position": [
+            -2.0,
+            1.2,
+            0.0
+          ],
+          "facing_degrees": 90.0
+        }
+      ],
+      "root_segments": []
     }
   ]
 }
