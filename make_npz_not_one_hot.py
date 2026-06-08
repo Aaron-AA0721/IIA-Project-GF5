@@ -3,7 +3,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 src_dir = Path("libraries/avatars/Aaron/outputs")
-dst_dir = Path("libraries/avatars/Amber_force/outputs")
+dst_dir = Path("libraries/avatars/Collei/outputs")
 
 src_obj = src_dir / "animation_lowres.obj"
 src_npz = src_dir / "animation_lowres_skinning_weights.npz"

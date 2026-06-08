@@ -26,7 +26,7 @@
     "fov": null
   },
   "export": {
-    "fps": 10,
+    "fps": 5,
     "width": 1280,
     "height": 720
   },
@@ -36,7 +36,7 @@
       "label": "Avatar 2",
       "color": "#2f9b72",
       "proxy_asset": "SMPL-24 Proxy",
-      "avatar_asset": "E:\\00_Camb\\GF5__\\IIA-Project-GF5\\libraries\\avatars\\Amber_new",
+      "avatar_asset": "E:\\00_Camb\\GF5__\\IIA-Project-GF5\\libraries\\avatars\\Nailong2",
       "track": [
         {
           "clip": "Custom: HY-Motion: a person dodging during a boxing match to avoid being hit (3)",
@@ -151,7 +151,7 @@
       "label": "Avatar 3",
       "color": "#d6a72f",
       "proxy_asset": "SMPL-24 Proxy",
-      "avatar_asset": "E:\\00_Camb\\GF5__\\IIA-Project-GF5\\libraries\\avatars\\Amber_force",
+      "avatar_asset": "E:\\00_Camb\\GF5__\\IIA-Project-GF5\\libraries\\avatars\\Collei",
       "track": [
         {
           "clip": "Custom: HY-Motion: a person dodging during a boxing match to avoid being hit (4)",
