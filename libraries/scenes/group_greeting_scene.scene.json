@@ -13,8 +13,8 @@
     "objects": []
   },
   "camera": {
-    "preset": "slow_orbit",
-    "target": "character_3",
+    "preset": "wide_static",
+    "target": "character_2",
     "height": 1.45,
     "orbit_radius": null,
     "static_position": [
@@ -26,9 +26,9 @@
     "fov": null
   },
   "export": {
-    "fps": 24,
-    "width": 960,
-    "height": 540
+    "fps": 10,
+    "width": 1280,
+    "height": 720
   },
   "characters": [
     {
@@ -151,7 +151,7 @@
       "label": "Avatar 3",
       "color": "#d6a72f",
       "proxy_asset": "SMPL-24 Proxy",
-      "avatar_asset": "E:\\00_Camb\\GF5__\\IIA-Project-GF5\\libraries\\avatars\\Amber_new",
+      "avatar_asset": "E:\\00_Camb\\GF5__\\IIA-Project-GF5\\libraries\\avatars\\Amber_force",
       "track": [
         {
           "clip": "Custom: HY-Motion: a person dodging during a boxing match to avoid being hit (4)",

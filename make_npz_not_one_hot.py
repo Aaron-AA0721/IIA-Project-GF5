@@ -3,7 +3,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 src_dir = Path("libraries/avatars/Aaron/outputs")
-dst_dir = Path("libraries/avatars/Amber_new/outputs")
+dst_dir = Path("libraries/avatars/Amber_force/outputs")
 
 src_obj = src_dir / "animation_lowres.obj"
 src_npz = src_dir / "animation_lowres_skinning_weights.npz"
@@ -60,6 +60,38 @@ W_dst = (W_src[idx] * inv[..., None]).sum(axis=1)
 W_dst = np.maximum(W_dst, 0.0)
 W_dst = W_dst / np.clip(W_dst.sum(axis=1, keepdims=True), 1e-8, None)
 W_dst = W_dst.astype(np.float32)
+
+# ------------------------------------------------------------------
+# Hard fix: override head-region weights
+# ------------------------------------------------------------------
+
+HEAD_JOINT = 15   # TODO: verify this for your skeleton
+NECK_JOINT = 12   # TODO: verify this for your skeleton
+
+# V_dst[:, 1] for OBJ Y-up, V_dst[:, 2] for OBJ Z-up
+height_axis = 1
+h = V_dst[:, height_axis]
+
+h_min, h_max = h.min(), h.max()
+
+upper_head_threshold = h_min + 0.84 * (h_max - h_min)
+lower_head_threshold = h_min + 0.76 * (h_max - h_min)
+
+upper_head_mask = h > upper_head_threshold
+lower_head_mask = (h > lower_head_threshold) & (h <= upper_head_threshold)
+
+print("upper head vertices forced:", np.count_nonzero(upper_head_mask))
+print("lower head vertices softened:", np.count_nonzero(lower_head_mask))
+
+# Upper head, hair, ears, accessories: rigid head
+W_dst[upper_head_mask, :] = 0.0
+W_dst[upper_head_mask, HEAD_JOINT] = 1.0
+
+# Lower head / chin / neck transition: mostly head, slight neck
+W_dst[lower_head_mask, :] = 0.0
+W_dst[lower_head_mask, HEAD_JOINT] = 0.85
+W_dst[lower_head_mask, NECK_JOINT] = 0.15
+
 
 np.savez(
     dst_npz,

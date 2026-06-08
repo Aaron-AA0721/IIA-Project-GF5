@@ -2,7 +2,7 @@ from pathlib import Path
 import numpy as np
 
 template_npz = Path("libraries/avatars/Aaron/outputs/animation_lowres_skinning_weights.npz")
-avatar_dir = Path("libraries/avatars/hilichurl_test/outputs")
+avatar_dir = Path("libraries/avatars/Amber_onehot/outputs")
 
 obj_path = avatar_dir / "animation_lowres.obj"
 out_npz = avatar_dir / "animation_lowres_skinning_weights.npz"
