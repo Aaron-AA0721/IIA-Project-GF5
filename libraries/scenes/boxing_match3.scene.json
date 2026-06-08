@@ -30,7 +30,7 @@
     "fov": 45.0
   },
   "export": {
-    "fps": 1,
+    "fps": 3,
     "width": 480,
     "height": 270
   },
@@ -40,7 +40,7 @@
       "label": "Avatar 2",
       "color": "#2f9b72",
       "proxy_asset": "SMPL-24 Proxy",
-      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\assets\\smpl\\models\\basicmodel_m_lbs_10_207_0_v1.1.0.pkl",
+      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\libraries\\avatars\\Amber_force",
       "track": [
         {
           "clip": "Custom: HY-Motion: a person dodging during a boxing match to avoid being hit (3)",
@@ -215,7 +215,7 @@
       "label": "Avatar 3",
       "color": "#d6a72f",
       "proxy_asset": "SMPL-24 Proxy",
-      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\assets\\smpl\\models\\basicmodel_m_lbs_10_207_0_v1.1.0.pkl",
+      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\libraries\\avatars\\Aaron",
       "track": [
         {
           "clip": "Custom: HY-Motion: a person dodging during a boxing match to avoid being hit (4)",
@@ -466,7 +466,7 @@
       "label": "Avatar 4",
       "color": "#c04848",
       "proxy_asset": "SMPL-24 Proxy",
-      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\assets\\smpl\\models\\basicmodel_neutral_lbs_10_207_0_v1.1.0.pkl",
+      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\libraries\\avatars\\Nailong2",
       "track": [
         {
           "clip": "Custom: start_match_3",
@@ -518,7 +518,7 @@
       "label": "Avatar 5",
       "color": "#5d8749",
       "proxy_asset": "SMPL-24 Proxy",
-      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\assets\\smpl\\models\\basicmodel_f_lbs_10_207_0_v1.1.0.pkl",
+      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\libraries\\avatars\\Collei",
       "track": [
         {
           "clip": "Custom: HY-Motion: The spectator throws both arms upward and bouncing on their feet  bouncing on the feet, leaning the upper body backward with head tilted up, to celebrate the victory of their favored winner",
@@ -560,7 +560,7 @@
       "label": "Avatar 6",
       "color": "#2f7f7b",
       "proxy_asset": "SMPL-24 Proxy",
-      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\assets\\smpl\\models\\basicmodel_f_lbs_10_207_0_v1.1.0.pkl",
+      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\libraries\\avatars\\Nico",
       "track": [
         {
           "clip": "Preset: Celebrate",
@@ -602,7 +602,7 @@
       "label": "Avatar 7",
       "color": "#2f91c2",
       "proxy_asset": "SMPL-24 Proxy",
-      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\assets\\smpl\\models\\basicmodel_f_lbs_10_207_0_v1.1.0.pkl",
+      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\libraries\\avatars\\Xiangling",
       "track": [
         {
           "clip": "Preset: Look around",
@@ -667,7 +667,7 @@
       "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\assets\\smpl\\models\\basicmodel_boxingR31.pkl",
       "track": [
         {
-          "clip": "Custom: static_boxingring",
+          "clip": "Custom: static_boxingring_2",
           "start": 0.0,
           "duration": 10.0,
           "trim_start": 0.0,
@@ -677,7 +677,7 @@
           "blend_out": 0.45
         },
         {
-          "clip": "Custom: static_boxingring",
+          "clip": "Custom: static_boxingring_2",
           "start": 10.0,
           "duration": 10.0,
           "trim_start": 0.0,
@@ -687,7 +687,7 @@
           "blend_out": 0.45
         },
         {
-          "clip": "Custom: static_boxingring",
+          "clip": "Custom: static_boxingring_2",
           "start": 20.0,
           "duration": 10.0,
           "trim_start": 0.0,
@@ -697,7 +697,7 @@
           "blend_out": 0.45
         },
         {
-          "clip": "Custom: static_boxingring",
+          "clip": "Custom: static_boxingring_2",
           "start": 30.0,
           "duration": 6.5,
           "trim_start": 0.0,

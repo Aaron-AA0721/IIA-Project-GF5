@@ -795,7 +795,7 @@ def valid_up2you_character_root(path: Path) -> bool:
     animation_mesh = output_dir / "animation_lowres.obj"
     return (
         animation_mesh.exists()
-        and packaged_skinning_weights_path(animation_mesh).exists()
+        #and packaged_skinning_weights_path(animation_mesh).exists()
         and (output_dir / "smplx_mesh.obj").exists()
     )
 
@@ -937,9 +937,11 @@ def discover_asset_sources(
     character_dirs: list[Path],
 ) -> dict[str, tuple[str, Path]]:
     sources = {label: ("rigid", path) for label, path in discover_assets(asset_dir).items()}
+    
     for label, path in discover_smpl_models(smpl_model_path).items():
         sources[label] = ("smpl", path)
     for label, path in discover_up2you_characters(character_dirs).items():
+        #print(path)
         sources[label] = ("up2you", path)
     return sources
 
@@ -1129,10 +1131,19 @@ def load_up2you_character_asset(character_root: Path, _smplx_model_path: Path) -
         vertex_count=animation_vertices_raw.shape[0],
     )
     if packaged_skinning is None:
-        raise ValueError(
-            "Avatar package must include outputs/animation_lowres_skinning_weights.npz "
-            "with SMPL-24 skinning_weights and rest_joints."
-        )
+        # No skinning package available: bind every vertex rigidly to the root
+        # joint (index 0) with full weight.  All other joints receive zero
+        # weight, so their positions never influence the mesh — we therefore
+        # place every joint at the raw mesh centroid (in SMPL-native Y-up
+        # coordinates) as an arbitrary but self-consistent stand-in.
+        num_joints = len(SMPL_24_PROFILE.joint_names)
+        vertex_count = animation_vertices_raw.shape[0]
+        skinning_weights = np.zeros((vertex_count, num_joints), dtype=np.float32)
+        skinning_weights[:, 0] = 1.0
+        centroid_native = animation_vertices_raw.mean(axis=0)
+        rest_joints_raw = np.tile(centroid_native, (num_joints, 1)).astype(np.float32)
+        packaged_skinning = (skinning_weights, rest_joints_raw)
+        print("no packaged_skinning, making all weights zero")
     skinning_weights, rest_joints_raw = packaged_skinning
     rest_joints = rotate_points_to_viewer(rest_joints_raw)
 
@@ -1161,7 +1172,7 @@ def load_up2you_character_asset(character_root: Path, _smplx_model_path: Path) -
                 rest_position=rest_position,
             )
         )
-
+    # print(bone_edges)
     skinned_model_data = SkinnedMeshData(
         rest_vertices=rest_vertices,
         rest_joints=rest_joints,
@@ -1612,6 +1623,7 @@ def main() -> None:
         character_dirs = []
     avatar_import_root = project_root / ".viewer_imports" / "avatars"
     asset_sources = discover_asset_sources(asset_dir, smpl_model_path, character_dirs)
+    # print(asset_sources)
     pose_library_dir = project_root / "libraries" / "poses"
     motion_library_dir = project_root / "libraries" / "motions" / "custom"
     video_export_dir = project_root / "exports" / "videos"

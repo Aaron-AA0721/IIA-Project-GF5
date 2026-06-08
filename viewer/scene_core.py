@@ -165,7 +165,7 @@ def valid_avatar_root(path: Path) -> bool:
     animation_mesh = output_dir / "animation_lowres.obj"
     weights = output_dir / "animation_lowres_skinning_weights.npz"
     smplx_mesh = output_dir / "smplx_mesh.obj"
-    return output_dir.is_dir() and animation_mesh.exists() and weights.exists() and smplx_mesh.exists()
+    return output_dir.is_dir() and animation_mesh.exists() and smplx_mesh.exists()
 
 
 def infer_avatar_label(path: Path) -> str:
@@ -249,6 +249,7 @@ def discover_avatar_assets(project_root: Path) -> list[dict[str, str]]:
     ]
     for search_dir in search_dirs:
         for root in iter_avatar_roots(search_dir):
+            # print(root)
             add_asset(f"UP2You: {infer_avatar_label(root)}", root, "up2you")
     return sorted(assets, key=lambda item: (natural_sort_key(item["label"]), item["path"]))
 
