@@ -1,7 +1,7 @@
 {
   "format": "gf5_motion_scene",
   "version": 3,
-  "duration": 36.5,
+  "duration": 37.0,
   "background": {
     "color": "#f4f1ea",
     "image_path": "",
@@ -30,9 +30,9 @@
     "fov": 45.0
   },
   "export": {
-    "fps": 3,
-    "width": 480,
-    "height": 270
+    "fps": 1,
+    "width": 960,
+    "height": 480
   },
   "characters": [
     {
@@ -133,19 +133,9 @@
           "blend_out": 0.45
         },
         {
-          "clip": "Preset: Idle stand",
-          "start": 25.5,
-          "duration": 2.966667,
-          "trim_start": 0.0,
-          "trim_end": null,
-          "root_mode": "path",
-          "blend_in": 0.45,
-          "blend_out": 0.45
-        },
-        {
-          "clip": "Preset: Idle stand",
-          "start": 28.5,
-          "duration": 2.966667,
+          "clip": "Preset: Bend down",
+          "start": 25.0,
+          "duration": 3.966667,
           "trim_start": 0.0,
           "trim_end": null,
           "root_mode": "path",
@@ -521,6 +511,26 @@
       "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\libraries\\avatars\\Collei",
       "track": [
         {
+          "clip": "Preset: Two-hand wave",
+          "start": 4.4,
+          "duration": 2.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Preset: Look around",
+          "start": 17.1,
+          "duration": 2.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
           "clip": "Custom: HY-Motion: The spectator throws both arms upward and bouncing on their feet  bouncing on the feet, leaning the upper body backward with head tilted up, to celebrate the victory of their favored winner",
           "start": 20.1,
           "duration": 5.7,
@@ -560,8 +570,28 @@
       "label": "Avatar 6",
       "color": "#2f7f7b",
       "proxy_asset": "SMPL-24 Proxy",
-      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\libraries\\avatars\\Nico",
+      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\libraries\\avatars\\Xiangling",
       "track": [
+        {
+          "clip": "Preset: Look around",
+          "start": 7.5,
+          "duration": 2.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Preset: Two-hand wave",
+          "start": 14.4,
+          "duration": 2.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
         {
           "clip": "Preset: Celebrate",
           "start": 20.5,
@@ -589,7 +619,7 @@
           "time": 0.0,
           "position": [
             -2.0,
-            2.0,
+            2.7,
             0.0
           ],
           "facing_degrees": 135.0
@@ -602,7 +632,7 @@
       "label": "Avatar 7",
       "color": "#2f91c2",
       "proxy_asset": "SMPL-24 Proxy",
-      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\libraries\\avatars\\Xiangling",
+      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\assets\\smpl\\models\\basicmodel_m_lbs_10_207_0_v1.1.0.pkl",
       "track": [
         {
           "clip": "Preset: Look around",
@@ -643,6 +673,16 @@
           "root_mode": "path",
           "blend_in": 0.45,
           "blend_out": 0.45
+        },
+        {
+          "clip": "Preset: Jump twice",
+          "start": 26.0,
+          "duration": 3.966667,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
         }
       ],
       "root_keys": [
@@ -651,7 +691,7 @@
           "time": 0.0,
           "position": [
             -2.0,
-            1.2,
+            1.7,
             0.0
           ],
           "facing_degrees": 90.0
@@ -699,7 +739,7 @@
         {
           "clip": "Custom: static_boxingring_2",
           "start": 30.0,
-          "duration": 6.5,
+          "duration": 7.0,
           "trim_start": 0.0,
           "trim_end": null,
           "root_mode": "path",
@@ -717,6 +757,639 @@
             0.0
           ],
           "facing_degrees": 0.0
+        }
+      ],
+      "root_segments": []
+    },
+    {
+      "id": "character_9",
+      "label": "Avatar 9",
+      "color": "#d88c2d",
+      "proxy_asset": "SMPL-24 Proxy",
+      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\libraries\\avatars\\Trophy",
+      "track": [
+        {
+          "clip": "Custom: objLow",
+          "start": 0.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 1.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 2.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 3.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 4.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 5.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 6.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 7.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 8.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 9.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 10.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 11.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 12.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 13.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 14.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 15.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 16.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 17.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objLow",
+          "start": 18.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objRise_2",
+          "start": 19.0,
+          "duration": 4.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objHigh",
+          "start": 23.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objHigh",
+          "start": 24.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objHigh",
+          "start": 25.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objHigh",
+          "start": 26.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objHigh",
+          "start": 27.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objHigh",
+          "start": 28.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objHigh",
+          "start": 29.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objHigh",
+          "start": 30.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objHigh",
+          "start": 31.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objHigh",
+          "start": 32.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objHigh",
+          "start": 33.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objHigh",
+          "start": 34.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objHigh",
+          "start": 35.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: objHigh",
+          "start": 36.0,
+          "duration": 1.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        }
+      ],
+      "root_keys": [
+        {
+          "id": "k0",
+          "time": 0.0,
+          "position": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "facing_degrees": 0.0
+        },
+        {
+          "id": "k1",
+          "time": 19.0,
+          "position": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "facing_degrees": 0.0
+        },
+        {
+          "id": "k3",
+          "time": 19.5,
+          "position": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "facing_degrees": 180.0
+        },
+        {
+          "id": "k4",
+          "time": 20.0,
+          "position": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "facing_degrees": 360.0
+        },
+        {
+          "id": "k5",
+          "time": 20.5,
+          "position": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "facing_degrees": 180.0
+        },
+        {
+          "id": "k6",
+          "time": 21.0,
+          "position": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "facing_degrees": 0.0
+        },
+        {
+          "id": "k2",
+          "time": 21.5,
+          "position": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "facing_degrees": 180.0
+        },
+        {
+          "id": "k7",
+          "time": 22.0,
+          "position": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "facing_degrees": 360.0
+        },
+        {
+          "id": "k8",
+          "time": 22.5,
+          "position": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "facing_degrees": 180.0
+        },
+        {
+          "id": "k9",
+          "time": 23.0,
+          "position": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "facing_degrees": 360.0
+        },
+        {
+          "id": "k10",
+          "time": 23.5,
+          "position": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "facing_degrees": 180.0
+        },
+        {
+          "id": "k11",
+          "time": 24.0,
+          "position": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "facing_degrees": 360.0
+        },
+        {
+          "id": "k12",
+          "time": 24.5,
+          "position": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "facing_degrees": 180.0
+        },
+        {
+          "id": "k13",
+          "time": 25.0,
+          "position": [
+            0.0,
+            -0.5,
+            0.0
+          ],
+          "facing_degrees": 360.0
+        }
+      ],
+      "root_segments": [
+        {
+          "from": "k0",
+          "to": "k1",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k1",
+          "to": "k3",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k3",
+          "to": "k4",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k4",
+          "to": "k5",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k5",
+          "to": "k6",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k6",
+          "to": "k2",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k2",
+          "to": "k7",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k7",
+          "to": "k8",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k8",
+          "to": "k9",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k9",
+          "to": "k10",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k10",
+          "to": "k11",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k11",
+          "to": "k12",
+          "mode": "linear",
+          "facing": "manual"
+        },
+        {
+          "from": "k12",
+          "to": "k13",
+          "mode": "linear",
+          "facing": "manual"
+        }
+      ]
+    },
+    {
+      "id": "character_10",
+      "label": "Avatar 10",
+      "color": "#56656f",
+      "proxy_asset": "SMPL-24 Proxy",
+      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\libraries\\avatars\\Glove",
+      "track": [
+        {
+          "clip": "Custom: static",
+          "start": 0.0,
+          "duration": 10.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: static",
+          "start": 10.0,
+          "duration": 10.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: static",
+          "start": 20.0,
+          "duration": 10.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        },
+        {
+          "clip": "Custom: static",
+          "start": 30.0,
+          "duration": 7.0,
+          "trim_start": 0.0,
+          "trim_end": null,
+          "root_mode": "path",
+          "blend_in": 0.45,
+          "blend_out": 0.45
+        }
+      ],
+      "root_keys": [
+        {
+          "id": "k0",
+          "time": 0.0,
+          "position": [
+            -1.0,
+            0.0,
+            0.0
+          ],
+          "facing_degrees": 135.0
         }
       ],
       "root_segments": []
