@@ -172,6 +172,14 @@ def load_smpl_model_data(model_path: str | Path) -> SmplModelData:
         skinning_setup_error=skinning_setup_error,
     )
 
+def load_static_smpl_mesh(model_path: str | Path) -> SmplModelData:
+    model_data = load_smpl_model_data(model_path)
+    model_data.skinning_weights = np.zeros_like(model_data.skinning_weights, dtype=np.float32)
+    model_data.one_hot_skinning_weights = np.zeros_like(model_data.one_hot_skinning_weights, dtype=np.float32)
+    if model_data.skinning_setup_error is not None:
+        raise RuntimeError(f"Cannot load static SMPL mesh: {model_data.skinning_setup_error}")
+    return model_data
+
 
 def make_one_hot_skinning_weights(weights: np.ndarray) -> np.ndarray:
     return get_part2_skinning_module().make_one_hot_skinning_weights(weights)

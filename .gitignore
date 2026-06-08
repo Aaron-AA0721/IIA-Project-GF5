@@ -25,12 +25,12 @@ exports/
 # libraries/motions/custom/
 libraries/poses/
 animations_fbx/
-
+libraries/scenes/group_greeting_scene.scene.json
 
 # Local SMPL model downloads
-smpl/
+smpl_webuser/
 smplify_public/
-assets/smpl/
+#assets/smpl/
 Report1/
 
 # Staff/reference implementations must not be committed to the student repo
@@ -45,3 +45,8 @@ site/
 
 # Local slide notes
 slides/student_notes/
+assets/smpl/__init__.py
+assets/smpl/models/basicmodel_f_lbs_10_207_0_v1.1.0.pkl
+assets/smpl/models/basicmodel_m_lbs_10_207_0_v1.1.0.pkl
+assets/smpl/models/basicmodel_floor.pkl
+assets/smpl/models/basicmodel_neutral_lbs_10_207_0_v1.1.0.pkl
