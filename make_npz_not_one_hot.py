@@ -3,7 +3,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 src_dir = Path("libraries/avatars/Aaron/outputs")
-dst_dir = Path("libraries/avatars/Amber/outputs")
+dst_dir = Path("libraries/avatars/Amber_new/outputs")
 
 src_obj = src_dir / "animation_lowres.obj"
 src_npz = src_dir / "animation_lowres_skinning_weights.npz"
@@ -29,7 +29,7 @@ with np.load(src_npz, allow_pickle=False) as src:
     W_src = np.asarray(src["skinning_weights"], dtype=np.float32)
     rest_joints = np.asarray(src["rest_joints"], dtype=np.float32)
 
-    # copy useful metadata from Aaron
+    # copy useful metadata from UP2You generated SMPL weights
     meta = {k: src[k] for k in src.files if k not in {"skinning_weights"}}
 
 print("source verts:", V_src.shape)
@@ -51,7 +51,7 @@ tree = cKDTree(V_src)
 
 # Use k-nearest blending instead of single nearest vertex.
 # This makes smoother weights.
-dist, idx = tree.query(V_dst_for_matching, k=8)
+dist, idx = tree.query(V_dst_for_matching, k=2)
 
 inv = 1.0 / np.maximum(dist, 1e-6)
 inv = inv / inv.sum(axis=1, keepdims=True)
