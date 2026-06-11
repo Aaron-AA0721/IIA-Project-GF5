@@ -30,9 +30,9 @@
     "fov": 45.0
   },
   "export": {
-    "fps": 1,
-    "width": 960,
-    "height": 480
+    "fps": 24,
+    "width": 1280,
+    "height": 720
   },
   "characters": [
     {
@@ -556,7 +556,7 @@
           "id": "k0",
           "time": 0.0,
           "position": [
-            -2.0,
+            -2.5,
             -1.0,
             0.0
           ],
@@ -618,7 +618,7 @@
           "id": "k0",
           "time": 0.0,
           "position": [
-            -2.0,
+            -2.5,
             2.7,
             0.0
           ],
@@ -690,7 +690,7 @@
           "id": "k0",
           "time": 0.0,
           "position": [
-            -2.0,
+            -2.5,
             1.7,
             0.0
           ],
@@ -704,7 +704,7 @@
       "label": "Avatar 8",
       "color": "#a86438",
       "proxy_asset": "SMPL-24 Proxy",
-      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\assets\\smpl\\models\\basicmodel_boxingR31.pkl",
+      "avatar_asset": "E:\\study\\CAM\\GF5 Animating 3D characters\\libraries\\avatars\\BoxingRing",
       "track": [
         {
           "clip": "Custom: static_boxingring_2",
